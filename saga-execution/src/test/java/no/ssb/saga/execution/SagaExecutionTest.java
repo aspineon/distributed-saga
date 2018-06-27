@@ -46,7 +46,7 @@ public class SagaExecutionTest {
             System.out.println(data);
             return "{}";
         }, executorService, saga, adapterLoader);
-        sagaExecution.executeSaga(requestData, 1, TimeUnit.MINUTES);
+        sagaExecution.executeSaga(requestData).getTraversalResult().waitForCompletion(1, TimeUnit.MINUTES);
         assertEquals(nodesLogged, saga.nodes().stream().map(n -> n.id).collect(Collectors.toSet()));
     }
 
@@ -57,7 +57,7 @@ public class SagaExecutionTest {
             System.out.println(data);
             return "{}";
         }, executorService, saga, adapterLoader);
-        sagaExecution.rollbackSaga(requestData, 1, TimeUnit.MINUTES);
+        sagaExecution.rollbackSaga(requestData).getTraversalResult().waitForCompletion(1, TimeUnit.MINUTES);
         assertEquals(nodesLogged, saga.nodes().stream().map(n -> n.id).collect(Collectors.toSet()));
     }
 

@@ -8,7 +8,9 @@ import io.undertow.util.HttpString;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.SagaExecution;
+import no.ssb.saga.execution.SagaHandoffControl;
 import no.ssb.saga.execution.adapter.AdapterLoader;
+import no.ssb.saga.execution.adapter.VisitationResult;
 import no.ssb.saga.execution.sagalog.SagaLog;
 import no.ssb.saga.samples.polyglot.adapter.AdapterGraph;
 import no.ssb.saga.samples.polyglot.adapter.AdapterObjectStore;
@@ -22,7 +24,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Deque;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 
 public class PolyglotHttpHandler implements HttpHandler {
@@ -102,13 +106,23 @@ public class PolyglotHttpHandler implements HttpHandler {
              * Execute Saga
              */
             SagaExecution sagaExecution = new SagaExecution(sagaLog, executorService, polyglotSaga, adapterLoader);
+            long handoffTime = -1;
+            long executionTime = -1;
             boolean success = false;
             try {
-                sagaExecution.executeSaga(sagaInputStr, 5, TimeUnit.MINUTES);
+                long executionStartTime = System.currentTimeMillis();
+                SagaHandoffControl<VisitationResult<String>> handoffControl = sagaExecution.executeSaga(sagaInputStr);
+                handoffControl.getHandoffFuture().get(30, TimeUnit.SECONDS); // wait for saga handoff
+                handoffTime = System.currentTimeMillis() - executionStartTime;
+                handoffControl.getCompletionFuture().get(5, TimeUnit.MINUTES); // wait for saga completion
+                executionTime = System.currentTimeMillis() - executionStartTime;
                 success = true;
+            } catch (InterruptedException | ExecutionException | TimeoutException e) {
+                throw new RuntimeException(e);
             } finally {
                 if (!success) {
-                    sagaExecution.rollbackSaga(sagaInputStr, 5, TimeUnit.MINUTES);
+                    sagaExecution.rollbackSaga(sagaInputStr).getTraversalResult()
+                            .waitForCompletion(5, TimeUnit.MINUTES);
                 }
             }
 
@@ -120,6 +134,10 @@ public class PolyglotHttpHandler implements HttpHandler {
             exchange.getResponseHeaders().put(new HttpString("Content-Type"), "application/json; charset=utf-8");
             StringBuilder sb = new StringBuilder();
             sb.append("{");
+            sb.append("\"sagaHandoffTimeMs\":").append(handoffTime);
+            sb.append(",");
+            sb.append("\"sagaExecutionTimeMs\":").append(executionTime);
+            sb.append(",");
             sb.append("\"saga\":").append(SagaSerializer.toJson(polyglotSaga));
             sb.append(",");
             sb.append("\"log\":[");
