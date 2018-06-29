@@ -9,17 +9,19 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class SelectableFuture<V> extends SimpleFuture<V> implements RunnableFuture<V> {
 
-    private static class DoneQueueState<R> {
+    private static class DoneQueueState {
         private final AtomicBoolean signalled = new AtomicBoolean(false);
-        private final BlockingQueue<SelectableFuture<R>> doneQueue;
+        private final BlockingQueue<Selection> doneQueue;
+        private final Selection selection;
 
-        private DoneQueueState(BlockingQueue<SelectableFuture<R>> doneQueue) {
+        private DoneQueueState(BlockingQueue<Selection> doneQueue, Selection selection) {
             this.doneQueue = doneQueue;
+            this.selection = selection;
         }
     }
 
     private final Callable<V> wrap;
-    private final Collection<DoneQueueState<V>> doneQueues = new CopyOnWriteArrayList<>();
+    private final Collection<DoneQueueState> doneQueues = new CopyOnWriteArrayList<>();
 
     public SelectableFuture(Runnable runnable, V value) {
         wrap = () -> {
@@ -44,12 +46,12 @@ public class SelectableFuture<V> extends SimpleFuture<V> implements RunnableFutu
         }
     }
 
-    SelectableFuture<V> registerWithDoneQueueAndMarkSelectableIfDone(BlockingQueue<SelectableFuture<V>> doneQueue) {
-        DoneQueueState<V> state = new DoneQueueState<>(doneQueue);
+    SelectableFuture<V> registerWithDoneQueueAndMarkSelectableIfDone(BlockingQueue<Selection> doneQueue, Selection selection) {
+        DoneQueueState state = new DoneQueueState(doneQueue, selection);
         doneQueues.add(state);
         if (isDone()) {
             if (state.signalled.compareAndSet(false, true)) {
-                if (!state.doneQueue.offer(this)) {
+                if (!state.doneQueue.offer(selection)) {
                     throw new IllegalStateException("Unable to offer this Future instance to doneQueue.");
                 }
             }
@@ -60,9 +62,9 @@ public class SelectableFuture<V> extends SimpleFuture<V> implements RunnableFutu
     @Override
     SimpleFuture<V> markDone() {
         SimpleFuture<V> result = super.markDone();
-        for (DoneQueueState<V> state : doneQueues) {
+        for (DoneQueueState state : doneQueues) {
             if (state.signalled.compareAndSet(false, true)) {
-                if (!state.doneQueue.offer(this)) {
+                if (!state.doneQueue.offer(state.selection)) {
                     throw new IllegalStateException("Unable to offer this Future instance to doneQueue.");
                 }
             }

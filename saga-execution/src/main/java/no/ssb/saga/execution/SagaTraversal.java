@@ -3,11 +3,11 @@ package no.ssb.saga.execution;
 import no.ssb.concurrent.futureselector.FutureSelector;
 import no.ssb.concurrent.futureselector.SelectableFuture;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
+import no.ssb.concurrent.futureselector.Selection;
 import no.ssb.concurrent.futureselector.SimpleFuture;
 import no.ssb.concurrent.futureselector.Utils;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.api.SagaNode;
-import no.ssb.saga.execution.adapter.VisitationResult;
 
 import java.util.ArrayList;
 import java.util.Deque;
@@ -64,7 +64,7 @@ public class SagaTraversal {
 
         AtomicInteger pendingWalks = new AtomicInteger(1);
         BlockingQueue<SelectableFuture<List<String>>> futureThreadWalk = new LinkedBlockingQueue<>();
-        ConcurrentHashMap<String, SimpleFuture<SelectableFuture<VisitationResult>>> futureById = new ConcurrentHashMap<>();
+        ConcurrentHashMap<String, SimpleFuture<SelectableFuture<Object>>> futureById = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, SagaNode> visitedById = new ConcurrentHashMap<>();
         visitedById.putIfAbsent(firstNode.id, firstNode);
         SelectableFuture<List<String>> future = (SelectableFuture<List<String>>) executorService.submit(() -> {
@@ -105,7 +105,7 @@ public class SagaTraversal {
             SagaNode node,
             Deque<SagaNode> ancestors,
             ConcurrentMap<String, SagaNode> visitedById,
-            ConcurrentMap<String, SimpleFuture<SelectableFuture<VisitationResult>>> futureById,
+            ConcurrentMap<String, SimpleFuture<SelectableFuture<Object>>> futureById,
             SelectableFuture<SagaHandoffResult> handoffFuture,
             SelectableFuture<SagaHandoffResult> completionFuture,
             Function<SagaTraversalElement, Object> visit) {
@@ -118,37 +118,37 @@ public class SagaTraversal {
         Map<SagaNode, Object> outputByNode = new LinkedHashMap<>();
         if ((forward ? node.incoming.size() : node.outgoing.size()) > 0) {
             // Add to selector all visitation-futures this node depends on
-            FutureSelector<VisitationResult> selector = new FutureSelector<>();
+            FutureSelector<Object, SagaNode> selector = new FutureSelector<>();
             for (SagaNode dependOnNode : (forward ? node.incoming : node.outgoing)) {
-                SimpleFuture<SelectableFuture<VisitationResult>> dependOnSimpleFuture = futureById.computeIfAbsent(dependOnNode.id, k -> new SimpleFuture<>());
-                SelectableFuture<VisitationResult> selectableFuture;
+                SimpleFuture<SelectableFuture<Object>> dependOnSimpleFuture = futureById.computeIfAbsent(dependOnNode.id, k -> new SimpleFuture<>());
+                SelectableFuture<Object> selectableFuture;
                 try {
                     selectableFuture = dependOnSimpleFuture.get();
                 } catch (InterruptedException | ExecutionException e) {
                     throw Utils.launder(e);
                 }
-                selector.add(selectableFuture);
+                selector.add(selectableFuture, dependOnNode);
             }
             // Use selector to collect all visitation results
             while (selector.pending()) {
-                SelectableFuture<VisitationResult> selected = selector.select(); // block until a result is available
-                VisitationResult v;
+                Selection<Object, SagaNode> selected = selector.select();// block until a result is available
+                Object output;
                 try {
-                    v = selected.get(); // will never block
+                    output = selected.future.get(); // will never block
                 } catch (InterruptedException | ExecutionException e) {
                     throw Utils.launder(e);
                 }
-                outputByNode.put(v.node, v.output);
+                outputByNode.put(selected.control, output);
             }
         }
 
         /*
          * Visit this node within the walking thread
          */
-        SimpleFuture<SelectableFuture<VisitationResult>> futureResult = futureById.computeIfAbsent(node.id, k -> new SimpleFuture<>());
+        SimpleFuture<SelectableFuture<Object>> futureResult = futureById.computeIfAbsent(node.id, k -> new SimpleFuture<>());
         try {
             Object result = visit.apply(new SagaTraversalElement(outputByNode, ancestors, node));
-            SelectableFuture<VisitationResult> selectableFuture = new SelectableFuture<>(() -> new VisitationResult(node, result));
+            SelectableFuture<Object> selectableFuture = new SelectableFuture<>(() -> result);
             selectableFuture.run();
             futureResult.complete(selectableFuture);
         } catch (Throwable t) {

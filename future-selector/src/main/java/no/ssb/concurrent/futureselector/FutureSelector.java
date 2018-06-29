@@ -6,31 +6,31 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static no.ssb.concurrent.futureselector.Utils.launder;
 
-public class FutureSelector<V> {
+public class FutureSelector<F, C> {
 
     private final AtomicInteger taskCount = new AtomicInteger(0);
-    private final BlockingQueue<SelectableFuture<V>> doneQueue = new LinkedBlockingQueue<>();
+    private final BlockingQueue<Selection> doneQueue = new LinkedBlockingQueue<>();
 
-    public SelectableFuture<V> select() {
+    public Selection<F, C> select() {
         if (taskCount.get() <= 0) {
             throw new IllegalStateException("Attempting to select future for tasks that were never created with \"newFuture\"");
         }
-        SelectableFuture selectableFuture;
+        Selection<F, C> selected;
         try {
-            selectableFuture = doneQueue.take();
+            selected = doneQueue.take(); // safe unchecked assignment
         } catch (InterruptedException e) {
             throw launder(e);
         }
         taskCount.decrementAndGet();
-        return selectableFuture;
+        return selected;
     }
 
     public boolean pending() {
         return taskCount.get() > 0;
     }
 
-    public int add(SelectableFuture<V> selectableFuture) {
-        selectableFuture.registerWithDoneQueueAndMarkSelectableIfDone(doneQueue);
+    public int add(SelectableFuture<F> selectableFuture, C control) {
+        selectableFuture.registerWithDoneQueueAndMarkSelectableIfDone(doneQueue, new Selection<>(selectableFuture, control));
         return taskCount.incrementAndGet();
     }
 }
