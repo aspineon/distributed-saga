@@ -23,6 +23,22 @@ public class SagaExecution {
         this.adapterLoader = adapterLoader;
     }
 
+    public SagaLog getSagaLog() {
+        return sagaLog;
+    }
+
+    public SelectableThreadPoolExectutor getExecutorService() {
+        return executorService;
+    }
+
+    public Saga getSaga() {
+        return saga;
+    }
+
+    public AdapterLoader getAdapterLoader() {
+        return adapterLoader;
+    }
+
     /**
      * @param requestData the data to pass as input to start-node.
      * @return
@@ -35,22 +51,22 @@ public class SagaExecution {
         SagaTraversalResult traversalResult = sagaTraversal.forward(handoffFuture, completionFuture, ste -> {
             SagaAdapter adapter = adapterLoader.load(ste.node);
             if (Saga.ID_END.equals(ste.node.id)) {
-                sagaLog.write(SagaLog.AFTER, SagaLog.ACTION, ste.node, executionId.toString(), adapter.serializer(), null);
+                sagaLog.write(SagaLog.AFTER, SagaLog.ACTION, ste.node, executionId, adapter.serializer(), null);
                 completionFuture.complete(new SagaHandoffResult(executionId));
                 return null;
             }
             if (Saga.ID_START.equals(ste.node.id)) {
-                sagaLog.write(SagaLog.BEFORE, SagaLog.ACTION, ste.node, executionId.toString(), adapter.serializer(), requestData);
+                sagaLog.write(SagaLog.BEFORE, SagaLog.ACTION, ste.node, executionId, adapter.serializer(), requestData);
                 handoffFuture.complete(new SagaHandoffResult(executionId));
                 return null;
             }
             Object input = adapter.prepareInputFromDependees(requestData, ste.outputByNode);
-            sagaLog.write(SagaLog.BEFORE, SagaLog.ACTION, ste.node, executionId.toString(), adapter.serializer(), input);
+            sagaLog.write(SagaLog.BEFORE, SagaLog.ACTION, ste.node, executionId, adapter.serializer(), input);
             Object output = adapter.executeAction(input); // safe unchecked call
-            sagaLog.write(SagaLog.AFTER, SagaLog.ACTION, ste.node, executionId.toString(), adapter.serializer(), output);
+            sagaLog.write(SagaLog.AFTER, SagaLog.ACTION, ste.node, executionId, adapter.serializer(), output);
             return output;
         });
-        return new SagaHandoffControl(executionId, traversalResult, handoffFuture, completionFuture);
+        return new SagaHandoffControl(requestData, executionId, saga, sagaLog, adapterLoader, traversalResult, handoffFuture, completionFuture);
     }
 
     public SagaHandoffControl rollbackSaga(Object requestData) {
@@ -61,21 +77,21 @@ public class SagaExecution {
         SagaTraversalResult traversalResult = sagaTraversal.forward(handoffFuture, completionFuture, ste -> {
             SagaAdapter adapter = adapterLoader.load(ste.node);
             if (Saga.ID_END.equals(ste.node.id)) {
-                sagaLog.write(SagaLog.BEFORE, SagaLog.COMPENSATING_ACTION, ste.node, executionId.toString(), adapter.serializer(), null);
+                sagaLog.write(SagaLog.BEFORE, SagaLog.COMPENSATING_ACTION, ste.node, executionId, adapter.serializer(), null);
                 completionFuture.complete(new SagaHandoffResult(executionId));
                 return null;
             }
             if (Saga.ID_START.equals(ste.node.id)) {
-                sagaLog.write(SagaLog.AFTER, SagaLog.COMPENSATING_ACTION, ste.node, executionId.toString(), adapter.serializer(), null);
+                sagaLog.write(SagaLog.AFTER, SagaLog.COMPENSATING_ACTION, ste.node, executionId, adapter.serializer(), null);
                 handoffFuture.complete(new SagaHandoffResult(executionId));
                 return null;
             }
             Object input = adapter.prepareInputFromDependees(requestData, ste.outputByNode);
-            sagaLog.write(SagaLog.BEFORE, SagaLog.COMPENSATING_ACTION, ste.node, executionId.toString(), adapter.serializer(), input);
+            sagaLog.write(SagaLog.BEFORE, SagaLog.COMPENSATING_ACTION, ste.node, executionId, adapter.serializer(), input);
             Object output = adapter.executeCompensatingAction(input); // safe unchecked call
-            sagaLog.write(SagaLog.AFTER, SagaLog.COMPENSATING_ACTION, ste.node, executionId.toString(), adapter.serializer(), output);
+            sagaLog.write(SagaLog.AFTER, SagaLog.COMPENSATING_ACTION, ste.node, executionId, adapter.serializer(), output);
             return output;
         });
-        return new SagaHandoffControl(executionId, traversalResult, handoffFuture, completionFuture);
+        return new SagaHandoffControl(requestData, executionId, saga, sagaLog, adapterLoader, traversalResult, handoffFuture, completionFuture);
     }
 }
