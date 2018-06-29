@@ -5,7 +5,6 @@ import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.adapter.AdapterLoader;
 import no.ssb.saga.execution.adapter.SagaAdapter;
-import no.ssb.saga.execution.adapter.VisitationResult;
 import no.ssb.saga.execution.sagalog.SagaLog;
 
 import java.util.UUID;
@@ -24,53 +23,59 @@ public class SagaExecution {
         this.adapterLoader = adapterLoader;
     }
 
-    public SagaHandoffControl executeSaga(String requestData) {
+    /**
+     * @param requestData the data to pass as input to start-node.
+     * @return
+     */
+    public SagaHandoffControl executeSaga(Object requestData) {
         SelectableFuture<SagaHandoffResult> handoffFuture = new SelectableFuture<>(null);
         SelectableFuture<SagaHandoffResult> completionFuture = new SelectableFuture<>(null);
         UUID executionId = UUID.randomUUID();
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
-        SagaTraversalResult<VisitationResult<String>> traversalResult = sagaTraversal.forward(ste -> {
+        SagaTraversalResult traversalResult = sagaTraversal.forward(handoffFuture, completionFuture, ste -> {
             SagaAdapter adapter = adapterLoader.load(ste.node);
-            String inputJson = adapter.prepareJsonInputFromDependees(requestData, ste.previousResults);
-            String startEntry = executionId + " " + ste.node.id + " " + adapter.name() + " INPUT: " + inputJson;
-            sagaLog.write(ste.node, startEntry);
-            if (Saga.ID_START.equals(ste.node.id)) {
-                handoffFuture.complete(new SagaHandoffResult(executionId));
-            }
-            String outputJson = adapter.executeAction(inputJson);
-            String endEntry = executionId + " " + ste.node.id + " " + adapter.name() + " OUTPUT: " + outputJson;
-            sagaLog.write(ste.node, endEntry);
             if (Saga.ID_END.equals(ste.node.id)) {
+                sagaLog.write(SagaLog.AFTER, SagaLog.ACTION, ste.node, executionId.toString(), adapter.serializer(), null);
                 completionFuture.complete(new SagaHandoffResult(executionId));
+                return null;
             }
-            return new VisitationResult<>(ste.node, outputJson);
+            if (Saga.ID_START.equals(ste.node.id)) {
+                sagaLog.write(SagaLog.BEFORE, SagaLog.ACTION, ste.node, executionId.toString(), adapter.serializer(), requestData);
+                handoffFuture.complete(new SagaHandoffResult(executionId));
+                return null;
+            }
+            Object input = adapter.prepareInputFromDependees(requestData, ste.outputByNode);
+            sagaLog.write(SagaLog.BEFORE, SagaLog.ACTION, ste.node, executionId.toString(), adapter.serializer(), input);
+            Object output = adapter.executeAction(input); // safe unchecked call
+            sagaLog.write(SagaLog.AFTER, SagaLog.ACTION, ste.node, executionId.toString(), adapter.serializer(), output);
+            return output;
         });
-        SagaHandoffControl handoffControl = new SagaHandoffControl(traversalResult, handoffFuture, completionFuture);
-        return handoffControl;
+        return new SagaHandoffControl(traversalResult, handoffFuture, completionFuture);
     }
 
-    public SagaHandoffControl rollbackSaga(String requestData) {
+    public SagaHandoffControl rollbackSaga(Object requestData) {
         SelectableFuture<SagaHandoffResult> handoffFuture = new SelectableFuture<>(null);
         SelectableFuture<SagaHandoffResult> completionFuture = new SelectableFuture<>(null);
         UUID executionId = UUID.randomUUID();
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
-        SagaTraversalResult<VisitationResult<String>> traversalResult = sagaTraversal.backward(ste -> {
+        SagaTraversalResult traversalResult = sagaTraversal.forward(handoffFuture, completionFuture, ste -> {
             SagaAdapter adapter = adapterLoader.load(ste.node);
-            String inputJson = adapter.prepareJsonInputFromDependees(requestData, ste.previousResults);
-            String startEntry = executionId + " " + ste.node.id + " " + adapter.name() + " COMP-INPUT: " + inputJson;
-            sagaLog.write(ste.node, startEntry);
             if (Saga.ID_END.equals(ste.node.id)) {
-                handoffFuture.complete(new SagaHandoffResult(executionId));
-            }
-            String outputJson = adapter.executeCompensatingAction(inputJson);
-            String endEntry = executionId + " " + ste.node.id + " " + adapter.name() + " COMP-OUTPUT: " + outputJson;
-            sagaLog.write(ste.node, endEntry);
-            if (Saga.ID_START.equals(ste.node.id)) {
+                sagaLog.write(SagaLog.BEFORE, SagaLog.COMPENSATING_ACTION, ste.node, executionId.toString(), adapter.serializer(), null);
                 completionFuture.complete(new SagaHandoffResult(executionId));
+                return null;
             }
-            return new VisitationResult<>(ste.node, outputJson);
+            if (Saga.ID_START.equals(ste.node.id)) {
+                sagaLog.write(SagaLog.AFTER, SagaLog.COMPENSATING_ACTION, ste.node, executionId.toString(), adapter.serializer(), null);
+                handoffFuture.complete(new SagaHandoffResult(executionId));
+                return null;
+            }
+            Object input = adapter.prepareInputFromDependees(requestData, ste.outputByNode);
+            sagaLog.write(SagaLog.BEFORE, SagaLog.COMPENSATING_ACTION, ste.node, executionId.toString(), adapter.serializer(), input);
+            Object output = adapter.executeCompensatingAction(input); // safe unchecked call
+            sagaLog.write(SagaLog.AFTER, SagaLog.COMPENSATING_ACTION, ste.node, executionId.toString(), adapter.serializer(), output);
+            return output;
         });
-        SagaHandoffControl handoffControl = new SagaHandoffControl(traversalResult, handoffFuture, completionFuture);
-        return handoffControl;
+        return new SagaHandoffControl(traversalResult, handoffFuture, completionFuture);
     }
 }

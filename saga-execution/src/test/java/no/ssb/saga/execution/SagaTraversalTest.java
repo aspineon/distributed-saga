@@ -134,25 +134,25 @@ public class SagaTraversalTest {
         };
     }
 
-    private Function<SagaTraversalElement, String> validateForwardTraversalOrder(Saga saga) {
+    private Function<SagaTraversalElement, Object> validateForwardTraversalOrder(Saga saga) {
         return validateTraversalOrder(saga, true, str -> {
         });
     }
 
-    private Function<SagaTraversalElement, String> validateBackwardTraversalOrder(Saga saga) {
+    private Function<SagaTraversalElement, Object> validateBackwardTraversalOrder(Saga saga) {
         return validateTraversalOrder(saga, false, str -> {
         });
     }
 
-    private Function<SagaTraversalElement, String> validateForwardTraversalOrder(Saga saga, Consumer<String> visitAction) {
+    private Function<SagaTraversalElement, Object> validateForwardTraversalOrder(Saga saga, Consumer<String> visitAction) {
         return validateTraversalOrder(saga, true, visitAction);
     }
 
-    private Function<SagaTraversalElement, String> validateBackwardTraversalOrder(Saga saga, Consumer<String> visitAction) {
+    private Function<SagaTraversalElement, Object> validateBackwardTraversalOrder(Saga saga, Consumer<String> visitAction) {
         return validateTraversalOrder(saga, false, visitAction);
     }
 
-    private Function<SagaTraversalElement, String> validateTraversalOrder(Saga saga, boolean forward, Consumer<String> visitAction) {
+    private Function<SagaTraversalElement, Object> validateTraversalOrder(Saga saga, boolean forward, Consumer<String> visitAction) {
         final Set<String> visited = new ConcurrentSkipListSet<>();
         final Map<String, Set<String>> dependencyMap = forward ? sagaForwardDependencyMap(saga) : sagaBackwardDependencyMap(saga);
         return ste -> {

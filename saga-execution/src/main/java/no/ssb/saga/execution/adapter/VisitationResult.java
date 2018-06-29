@@ -2,12 +2,12 @@ package no.ssb.saga.execution.adapter;
 
 import no.ssb.saga.api.SagaNode;
 
-public class VisitationResult<V> {
+public class VisitationResult {
     public final SagaNode node;
-    public final V result;
+    public final Object output;
 
-    public VisitationResult(SagaNode node, V result) {
+    public VisitationResult(SagaNode node, Object output) {
         this.node = node;
-        this.result = result;
+        this.output = output;
     }
 }

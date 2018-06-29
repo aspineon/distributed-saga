@@ -1,29 +1,20 @@
 package no.ssb.saga.samples.polyglot.adapter;
 
-import no.ssb.saga.execution.adapter.SagaAdapter;
-import no.ssb.saga.execution.adapter.VisitationResult;
+import no.ssb.saga.execution.adapter.Adapter;
 import org.json.JSONObject;
 
-import java.util.List;
 import java.util.UUID;
 
-public class AdapterGraph implements SagaAdapter {
+public class WriteToGraph extends Adapter<JSONObject, JSONObject> {
 
     public static final String NAME = "Graph";
 
-    @Override
-    public String name() {
-        return NAME;
+    public WriteToGraph(Class<JSONObject> outputClazz) {
+        super(outputClazz, NAME);
     }
 
     @Override
-    public String prepareJsonInputFromDependees(String originalRequestJson, List<VisitationResult<String>> dependeesOutput) {
-        return originalRequestJson;
-    }
-
-    @Override
-    public String executeAction(String inputJson) {
-        JSONObject inputRoot = new JSONObject(inputJson);
+    public JSONObject executeAction(JSONObject inputRoot) {
         JSONObject root = new JSONObject();
         root.put("input", inputRoot);
         JSONObject output = new JSONObject();
@@ -31,12 +22,11 @@ public class AdapterGraph implements SagaAdapter {
         output.put("GraphOp", "CREATE Node('" + UUID.randomUUID() + "'); CREATE Link from recent node to Node('" + UUID.randomUUID() + "');");
         output.put("txid", UUID.randomUUID());
         root.put("output", output);
-        return root.toString();
+        return root;
     }
 
     @Override
-    public String executeCompensatingAction(String inputJson) {
-        JSONObject inputRoot = new JSONObject(inputJson);
+    public JSONObject executeCompensatingAction(JSONObject inputRoot) {
         JSONObject root = new JSONObject();
         root.put("input", inputRoot);
         JSONObject output = new JSONObject();
@@ -44,6 +34,6 @@ public class AdapterGraph implements SagaAdapter {
         output.put("GraphOp", "UPDATE Node('" + UUID.randomUUID() + "') SET field removed=true;");
         output.put("txid", UUID.randomUUID());
         root.put("output", output);
-        return root.toString();
+        return root;
     }
 }

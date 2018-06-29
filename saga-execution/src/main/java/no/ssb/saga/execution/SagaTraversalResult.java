@@ -8,6 +8,7 @@ import no.ssb.concurrent.futureselector.SimpleFuture;
 import no.ssb.concurrent.futureselector.TimeoutRuntimeException;
 import no.ssb.saga.api.Saga;
 import no.ssb.saga.api.SagaNode;
+import no.ssb.saga.execution.adapter.VisitationResult;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -24,13 +25,13 @@ import java.util.stream.Collectors;
 
 import static no.ssb.concurrent.futureselector.Utils.launder;
 
-public class SagaTraversalResult<V> {
+public class SagaTraversalResult {
     private final Saga saga;
     private final AtomicInteger pendingWalks;
     private final BlockingQueue<SelectableFuture<List<String>>> futureThreadWalk;
-    private final ConcurrentHashMap<String, SimpleFuture<SelectableFuture<V>>> visitFutureById;
+    private final ConcurrentHashMap<String, SimpleFuture<SelectableFuture<VisitationResult>>> visitFutureById;
 
-    public SagaTraversalResult(Saga saga, AtomicInteger pendingWalks, BlockingQueue<SelectableFuture<List<String>>> futureThreadWalk, ConcurrentHashMap<String, SimpleFuture<SelectableFuture<V>>> visitFutureById) {
+    public SagaTraversalResult(Saga saga, AtomicInteger pendingWalks, BlockingQueue<SelectableFuture<List<String>>> futureThreadWalk, ConcurrentHashMap<String, SimpleFuture<SelectableFuture<VisitationResult>>> visitFutureById) {
         this.saga = saga;
         this.pendingWalks = pendingWalks;
         this.futureThreadWalk = futureThreadWalk;
@@ -43,7 +44,7 @@ public class SagaTraversalResult<V> {
         });
     }
 
-    public void complete(long timeout, TimeUnit unit, Consumer<SelectableFuture<List<String>>> threadWalkConsumer, Consumer<V> visitConsumer) {
+    public void complete(long timeout, TimeUnit unit, Consumer<SelectableFuture<List<String>>> threadWalkConsumer, Consumer<Object> visitConsumer) {
         long startTime = System.currentTimeMillis();
         long durationMs = unit.toMillis(timeout);
 
@@ -54,18 +55,18 @@ public class SagaTraversalResult<V> {
             threadWalkConsumer.accept(futureWalk);
         }
 
-        FutureSelector<V> visitSelector = getVisitFutureSelector(startTime, durationMs);
+        FutureSelector<VisitationResult> visitSelector = getVisitFutureSelector(startTime, durationMs);
 
         while (visitSelector.pending()) {
-            SelectableFuture<V> selected = visitSelector.select();
+            SelectableFuture<VisitationResult> selected = visitSelector.select();
             long remainingMs = remaining(startTime, durationMs);
-            V value;
+            VisitationResult value;
             try {
                 value = selected.get(remainingMs, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
                 throw launder(e);
             }
-            visitConsumer.accept(value);
+            visitConsumer.accept(value.output);
         }
     }
 
@@ -79,7 +80,7 @@ public class SagaTraversalResult<V> {
      * @param startTime  start time as a reference for timeout
      * @param durationMs total number of milliseconds that this operation is allowed to take
      *                   before a TimeoutException should be thrown.
-     * @return
+     * @return a collection of all the thread-walks performed during saga-traversal
      * @throws TimeoutRuntimeException     if the time is up before all walk results could be retrieved.
      * @throws InterruptedRuntimeException if the calling thread is interrupted while waiting on walk
      *                                     results to complete.
@@ -132,12 +133,12 @@ public class SagaTraversalResult<V> {
         return futureWalks;
     }
 
-    private FutureSelector<V> getVisitFutureSelector(long startTime, long durationMs) {
-        FutureSelector<V> visitSelector = new FutureSelector<>();
+    private FutureSelector<VisitationResult> getVisitFutureSelector(long startTime, long durationMs) {
+        FutureSelector<VisitationResult> visitSelector = new FutureSelector<>();
         for (SagaNode node : saga.nodes()) {
-            Future<SelectableFuture<V>> futureFuture = visitFutureById.computeIfAbsent(node.id, k -> new SimpleFuture<>());
+            Future<SelectableFuture<VisitationResult>> futureFuture = visitFutureById.computeIfAbsent(node.id, k -> new SimpleFuture<>());
             long remainingMs = remaining(startTime, durationMs);
-            SelectableFuture<V> selectableFuture;
+            SelectableFuture<VisitationResult> selectableFuture;
             try {
                 // should not block as all walks were complete
                 selectableFuture = futureFuture.get(remainingMs, TimeUnit.MILLISECONDS);

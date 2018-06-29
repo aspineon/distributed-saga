@@ -1,40 +1,40 @@
 package no.ssb.saga.execution;
 
-import no.ssb.saga.execution.adapter.SagaAdapter;
-import no.ssb.saga.execution.adapter.VisitationResult;
+import no.ssb.saga.api.SagaNode;
+import no.ssb.saga.execution.adapter.Adapter;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.UUID;
 
-public class SagaAdapterGeneric implements SagaAdapter {
+public class SagaAdapterGeneric extends Adapter<Object, Object> {
 
     public static final String NAME = "Generic";
 
-    @Override
-    public String name() {
-        return NAME;
+    public SagaAdapterGeneric() {
+        super(Object.class, NAME);
     }
 
     @Override
-    public String prepareJsonInputFromDependees(String originalRequestJson, List<VisitationResult<String>> dependeesOutput) {
+    public Object prepareInputFromDependees(Object startInput, Map<SagaNode, Object> dependeesOutput) {
         JSONObject result = new JSONObject();
-        result.put("originalRequest", new JSONObject(originalRequestJson));
+        result.put("originalRequest", new JSONObject(String.valueOf(startInput)));
         JSONArray array = new JSONArray();
         result.put("dependees", array);
-        for (VisitationResult<String> vr : dependeesOutput) {
+        for (Map.Entry<SagaNode, Object> e : dependeesOutput.entrySet()) {
             JSONObject jo = new JSONObject();
-            jo.put("node-id", vr.node.id);
-            jo.put("result", new JSONObject(vr.result));
+            jo.put("node-id", e.getKey().id);
+            Object value = e.getValue();
+            jo.put("result", value == null ? null : new JSONObject(String.valueOf(value)));
             array.put(jo);
         }
         return result.toString();
     }
 
     @Override
-    public String executeAction(String inputJson) {
+    public Object executeAction(Object input) {
         JSONObject result = new JSONObject();
         result.put("action", "Generic Action Execution");
         result.put("unique-id", UUID.randomUUID().toString());
@@ -44,7 +44,7 @@ public class SagaAdapterGeneric implements SagaAdapter {
     }
 
     @Override
-    public String executeCompensatingAction(String inputJson) {
+    public Object executeCompensatingAction(Object input) {
         JSONObject result = new JSONObject();
         result.put("compensating action", "Generic Compensating Action Execution");
         result.put("unique-id", UUID.randomUUID().toString());

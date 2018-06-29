@@ -2,6 +2,7 @@ package no.ssb.saga.samples.polyglot;
 
 import io.undertow.Undertow;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
+import no.ssb.saga.samples.polyglot.sagalog.InMemorySagaLog;
 
 import java.net.InetSocketAddress;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -32,9 +33,11 @@ public class PolyglotMain {
                 new ThreadPoolExecutor.AbortPolicy()
         );
 
+        InMemorySagaLog sagaLog = new InMemorySagaLog();
+
         server = Undertow.builder()
                 .addHttpListener(port, host)
-                .setHandler(new PolyglotHttpHandler(pool))
+                .setHandler(new PolyglotHttpHandler(pool, sagaLog))
                 .build();
     }
 

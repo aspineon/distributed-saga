@@ -36,12 +36,11 @@ public class SagaExecutionTest {
             new ThreadPoolExecutor.AbortPolicy()
     );
 
-    private static final AdapterLoader adapterLoader = new AdapterLoader()
-            .register(new SagaAdapterGeneric());
+    private static final AdapterLoader adapterLoader = new AdapterLoader().register(new SagaAdapterGeneric());
 
     private void executeAndVerifyThatActionsWereExecuted(String requestData, Saga saga) {
         Set<String> nodesLogged = Collections.synchronizedSet(new LinkedHashSet<>());
-        SagaExecution sagaExecution = new SagaExecution((node, data) -> {
+        SagaExecution sagaExecution = new SagaExecution((beforeOrAfter, actionOrCompensatingAction, node, executionId, serializer, data) -> {
             nodesLogged.add(node.id);
             System.out.println(data);
             return "{}";
@@ -52,7 +51,7 @@ public class SagaExecutionTest {
 
     private void rollbackAndVerifyThatCompensatingActionsWereExecuted(String requestData, Saga saga) {
         Set<String> nodesLogged = Collections.synchronizedSet(new LinkedHashSet<>());
-        SagaExecution sagaExecution = new SagaExecution((node, data) -> {
+        SagaExecution sagaExecution = new SagaExecution((beforeOrAfter, actionOrCompensatingAction, node, executionId, serializer, data) -> {
             nodesLogged.add(node.id);
             System.out.println(data);
             return "{}";

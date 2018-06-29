@@ -1,13 +1,15 @@
 package no.ssb.saga.execution.adapter;
 
-import java.util.List;
+import no.ssb.saga.api.SagaNode;
+
+import java.util.Map;
 
 /**
  * Implementors of adapter must provide a stateless, re-usage adapter that
  * is safe for usage with multiple threads. This should be easy enough as
  * all needed context is passed as arguments to every method.
  */
-public interface SagaAdapter {
+public interface SagaAdapter<INPUT, OUTPUT> {
 
     /**
      * The adapter name as it should appear in the saga-log. Note that this name
@@ -22,28 +24,33 @@ public interface SagaAdapter {
     /**
      * Prepare input needed for processing of action or compensating action
      * of the saga-node represented by this adapter. The prepared input should
-     * in turn be passed to the {@link #executeAction(String) executeAction}
-     * or {@link #executeCompensatingAction(String) executeCompensatingAction} method.
-     * This method should generally be used to prepare compatible input to the execute methods.
+     * in turn be passed to the {@link #executeAction(INPUT) executeAction}
+     * or {@link #executeCompensatingAction(INPUT) executeCompensatingAction} method.
+     * This method should generally be used to prepare input that is compatible with
+     * the execute methods.
      *
-     * @param originalRequestJson the original request data associated with this saga in json format.
-     * @param dependeesOutput     the output from the execution of the dependees of the saga-node represented by this adapter.
-     * @return a json string representing the input needed to
-     * execute this adapter's action or compensating action.
+     * @param sagaRequestData the original request data associated with this saga.
+     * @param dependeesOutput the output from the execution of the dependees of the saga-node
+     *                        represented by this adapter.
+     * @return the input to be passed when this adapter's action or compensating action is called.
      */
-    String prepareJsonInputFromDependees(String originalRequestJson, List<VisitationResult<String>> dependeesOutput);
+    INPUT prepareInputFromDependees(Object sagaRequestData, Map<SagaNode, Object> dependeesOutput);
 
     /**
-     * @param inputJson execute the action that this adapter implicitly represents and use the
-     *                  passed json as input.
+     * @param input execute the action that this adapter implicitly represents using input.
      * @return the output from executing the action as a json string.
      */
-    String executeAction(String inputJson);
+    OUTPUT executeAction(INPUT input);
 
     /**
-     * @param inputJson execute the compensating action that this adapter implicitly represents
-     *                  and use the passed json as input.
+     * @param input execute the compensating action that this adapter implicitly represents using input.
      * @return the output from executing the action as a json string.
      */
-    String executeCompensatingAction(String inputJson);
+    OUTPUT executeCompensatingAction(INPUT input);
+
+    /**
+     * @return a serializer than can be used to serialize and de-serialize any object output
+     * by one of the action execute methods.
+     */
+    ActionOutputSerializer<OUTPUT> serializer();
 }

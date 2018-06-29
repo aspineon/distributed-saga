@@ -1,29 +1,20 @@
 package no.ssb.saga.samples.polyglot.adapter;
 
-import no.ssb.saga.execution.adapter.SagaAdapter;
-import no.ssb.saga.execution.adapter.VisitationResult;
+import no.ssb.saga.execution.adapter.Adapter;
 import org.json.JSONObject;
 
-import java.util.List;
 import java.util.UUID;
 
-public class AdapterObjectStore implements SagaAdapter {
+public class WriteToObjectStore extends Adapter<JSONObject, JSONObject> {
 
     public static final String NAME = "ObjectStore";
 
-    @Override
-    public String name() {
-        return NAME;
+    public WriteToObjectStore(Class<JSONObject> outputClazz) {
+        super(outputClazz, NAME);
     }
 
     @Override
-    public String prepareJsonInputFromDependees(String originalRequestJson, List<VisitationResult<String>> dependeesOutput) {
-        return originalRequestJson;
-    }
-
-    @Override
-    public String executeAction(String inputJson) {
-        JSONObject inputRoot = new JSONObject(inputJson);
+    public JSONObject executeAction(JSONObject inputRoot) {
         JSONObject root = new JSONObject();
         root.put("input", inputRoot);
         JSONObject output = new JSONObject();
@@ -36,12 +27,11 @@ public class AdapterObjectStore implements SagaAdapter {
         output.put("http", http);
         output.put("txid", UUID.randomUUID());
         root.put("output", output);
-        return root.toString();
+        return root;
     }
 
     @Override
-    public String executeCompensatingAction(String inputJson) {
-        JSONObject inputRoot = new JSONObject(inputJson);
+    public JSONObject executeCompensatingAction(JSONObject inputRoot) {
         JSONObject root = new JSONObject();
         root.put("input", inputRoot);
         JSONObject output = new JSONObject();
@@ -53,6 +43,6 @@ public class AdapterObjectStore implements SagaAdapter {
         output.put("http", http);
         output.put("txid", UUID.randomUUID());
         root.put("output", output);
-        return root.toString();
+        return root;
     }
 }

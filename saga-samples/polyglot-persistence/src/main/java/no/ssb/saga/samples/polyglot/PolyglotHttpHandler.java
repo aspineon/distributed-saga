@@ -10,20 +10,16 @@ import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.SagaExecution;
 import no.ssb.saga.execution.SagaHandoffControl;
 import no.ssb.saga.execution.adapter.AdapterLoader;
-import no.ssb.saga.execution.adapter.VisitationResult;
-import no.ssb.saga.execution.sagalog.SagaLog;
-import no.ssb.saga.samples.polyglot.adapter.AdapterGraph;
-import no.ssb.saga.samples.polyglot.adapter.AdapterObjectStore;
-import no.ssb.saga.samples.polyglot.adapter.AdapterPubSub;
-import no.ssb.saga.samples.polyglot.adapter.AdapterRDBMS;
+import no.ssb.saga.samples.polyglot.adapter.PublishToPubSub;
+import no.ssb.saga.samples.polyglot.adapter.WriteToGraph;
+import no.ssb.saga.samples.polyglot.adapter.WriteToObjectStore;
+import no.ssb.saga.samples.polyglot.adapter.WriteToRDBMS;
+import no.ssb.saga.samples.polyglot.sagalog.InMemorySagaLog;
 import no.ssb.saga.serialization.SagaSerializer;
 import org.json.JSONObject;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
-import java.util.Deque;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -31,9 +27,21 @@ import java.util.stream.Collectors;
 
 public class PolyglotHttpHandler implements HttpHandler {
     private final SelectableThreadPoolExectutor executorService;
+    private final InMemorySagaLog sagaLog;
+    private final AdapterLoader adapterLoader;
 
-    public PolyglotHttpHandler(SelectableThreadPoolExectutor executorService) {
+    public PolyglotHttpHandler(SelectableThreadPoolExectutor executorService, InMemorySagaLog sagaLog) {
         this.executorService = executorService;
+        this.sagaLog = sagaLog;
+
+        /*
+         * Register all adapters/drivers that will be used in sagas.
+         */
+        adapterLoader = new AdapterLoader()
+                .register(new WriteToRDBMS(JSONObject.class))
+                .register(new WriteToGraph(JSONObject.class))
+                .register(new WriteToObjectStore(JSONObject.class))
+                .register(new PublishToPubSub(JSONObject.class));
     }
 
     @Override
@@ -60,37 +68,16 @@ public class PolyglotHttpHandler implements HttpHandler {
 
 
             /*
-             * Register all adapters/drivers that will be used in saga.
-             */
-            AdapterLoader adapterLoader = new AdapterLoader()
-                    .register(new AdapterRDBMS())
-                    .register(new AdapterGraph())
-                    .register(new AdapterObjectStore())
-                    .register(new AdapterPubSub());
-
-
-            /*
              * Create Saga that will first write to 3 different persistence-technologies
              * in parallel, then publish an event to a pub-sub technology.
              */
             Saga polyglotSaga = Saga.start("Polyglot Saga")
                     .linkTo("rdbms", "graph", "objectstore")
-                    .id("rdbms").adapter(AdapterRDBMS.NAME).linkTo("pubsub")
-                    .id("graph").adapter(AdapterGraph.NAME).linkTo("pubsub")
-                    .id("objectstore").adapter(AdapterObjectStore.NAME).linkTo("pubsub")
-                    .id("pubsub").adapter(AdapterPubSub.NAME).linkToEnd()
+                    .id("rdbms").adapter(WriteToRDBMS.NAME).linkTo("pubsub")
+                    .id("graph").adapter(WriteToGraph.NAME).linkTo("pubsub")
+                    .id("objectstore").adapter(WriteToObjectStore.NAME).linkTo("pubsub")
+                    .id("pubsub").adapter(PublishToPubSub.NAME).linkToEnd()
                     .end();
-
-
-            /*
-             * In a real-world application you would typically replace this echo SagaLog
-             * with an integration with an external replicated log.
-             */
-            Deque<String> logEntries = new ConcurrentLinkedDeque<>();
-            SagaLog sagaLog = (node, data) -> {
-                logEntries.addLast(JSONObject.quote(data));
-                return "{\"logid\":\"" + UUID.randomUUID() + "\"}";
-            };
 
 
             /*
@@ -99,7 +86,6 @@ public class PolyglotHttpHandler implements HttpHandler {
             JSONObject inputRoot = new JSONObject();
             inputRoot.put("resource-path", exchange.getRequestPath());
             inputRoot.put("data", new String(buf, StandardCharsets.UTF_8));
-            String sagaInputStr = inputRoot.toString();
 
 
             /*
@@ -111,7 +97,7 @@ public class PolyglotHttpHandler implements HttpHandler {
             boolean success = false;
             try {
                 long executionStartTime = System.currentTimeMillis();
-                SagaHandoffControl<VisitationResult<String>> handoffControl = sagaExecution.executeSaga(sagaInputStr);
+                SagaHandoffControl handoffControl = sagaExecution.executeSaga(inputRoot);
                 handoffControl.getHandoffFuture().get(30, TimeUnit.SECONDS); // wait for saga handoff
                 handoffTime = System.currentTimeMillis() - executionStartTime;
                 handoffControl.getCompletionFuture().get(5, TimeUnit.MINUTES); // wait for saga completion
@@ -121,7 +107,7 @@ public class PolyglotHttpHandler implements HttpHandler {
                 throw new RuntimeException(e);
             } finally {
                 if (!success) {
-                    sagaExecution.rollbackSaga(sagaInputStr).getTraversalResult()
+                    sagaExecution.rollbackSaga(inputRoot).getTraversalResult()
                             .waitForCompletion(5, TimeUnit.MINUTES);
                 }
             }
@@ -141,7 +127,7 @@ public class PolyglotHttpHandler implements HttpHandler {
             sb.append("\"saga\":").append(SagaSerializer.toJson(polyglotSaga));
             sb.append(",");
             sb.append("\"log\":[");
-            sb.append(logEntries.stream().collect(Collectors.joining(",")));
+            sb.append(sagaLog.entries.stream().collect(Collectors.joining(",")));
             sb.append("]");
             sb.append("}");
             ByteBuffer responseData = ByteBuffer.wrap(sb.toString().getBytes(StandardCharsets.UTF_8));
