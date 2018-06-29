@@ -1,11 +1,9 @@
 package no.ssb.saga.execution;
 
-import java.util.UUID;
-
 public class SagaHandoffResult {
-    public final UUID executionId;
+    public final String executionId;
 
-    public SagaHandoffResult(UUID executionId) {
+    public SagaHandoffResult(String executionId) {
         this.executionId = executionId;
     }
 }

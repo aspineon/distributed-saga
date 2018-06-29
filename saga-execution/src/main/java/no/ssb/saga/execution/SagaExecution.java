@@ -30,7 +30,7 @@ public class SagaExecution {
     public SagaHandoffControl executeSaga(Object requestData) {
         SelectableFuture<SagaHandoffResult> handoffFuture = new SelectableFuture<>(null);
         SelectableFuture<SagaHandoffResult> completionFuture = new SelectableFuture<>(null);
-        UUID executionId = UUID.randomUUID();
+        String executionId = UUID.randomUUID().toString();
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
         SagaTraversalResult traversalResult = sagaTraversal.forward(handoffFuture, completionFuture, ste -> {
             SagaAdapter adapter = adapterLoader.load(ste.node);
@@ -50,13 +50,13 @@ public class SagaExecution {
             sagaLog.write(SagaLog.AFTER, SagaLog.ACTION, ste.node, executionId.toString(), adapter.serializer(), output);
             return output;
         });
-        return new SagaHandoffControl(traversalResult, handoffFuture, completionFuture);
+        return new SagaHandoffControl(executionId, traversalResult, handoffFuture, completionFuture);
     }
 
     public SagaHandoffControl rollbackSaga(Object requestData) {
         SelectableFuture<SagaHandoffResult> handoffFuture = new SelectableFuture<>(null);
         SelectableFuture<SagaHandoffResult> completionFuture = new SelectableFuture<>(null);
-        UUID executionId = UUID.randomUUID();
+        String executionId = UUID.randomUUID().toString();
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
         SagaTraversalResult traversalResult = sagaTraversal.forward(handoffFuture, completionFuture, ste -> {
             SagaAdapter adapter = adapterLoader.load(ste.node);
@@ -76,6 +76,6 @@ public class SagaExecution {
             sagaLog.write(SagaLog.AFTER, SagaLog.COMPENSATING_ACTION, ste.node, executionId.toString(), adapter.serializer(), output);
             return output;
         });
-        return new SagaHandoffControl(traversalResult, handoffFuture, completionFuture);
+        return new SagaHandoffControl(executionId, traversalResult, handoffFuture, completionFuture);
     }
 }
