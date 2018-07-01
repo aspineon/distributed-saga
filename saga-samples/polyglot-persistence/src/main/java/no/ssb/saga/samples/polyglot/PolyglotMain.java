@@ -2,7 +2,10 @@ package no.ssb.saga.samples.polyglot;
 
 import io.undertow.Undertow;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
+import no.ssb.saga.execution.sagalog.SagaLog;
+import no.ssb.saga.samples.polyglot.sagalog.FileSagaLog;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -14,7 +17,7 @@ public class PolyglotMain {
     final SelectableThreadPoolExectutor pool;
     final Undertow server;
 
-    PolyglotMain(int port, String host) {
+    PolyglotMain(int port, String host, String sagaLogPath) {
         AtomicLong nextWorkerId = new AtomicLong(1);
         pool = new SelectableThreadPoolExectutor(
                 5, 100,
@@ -32,9 +35,15 @@ public class PolyglotMain {
                 new ThreadPoolExecutor.AbortPolicy()
         );
 
+        /*
+         * Create a new file-based saga-log. Typically this will be replaced
+         * with integration to an external highly-available log with low-latency.
+         */
+        SagaLog sagaLog = new FileSagaLog(new File(sagaLogPath));
+
         server = Undertow.builder()
                 .addHttpListener(port, host)
-                .setHandler(new PolyglotHttpHandler(pool))
+                .setHandler(new PolyglotHttpHandler(pool, sagaLog))
                 .build();
     }
 
@@ -68,7 +77,7 @@ public class PolyglotMain {
     }
 
     public static void main(String[] args) {
-        PolyglotMain polyglotMain = new PolyglotMain(8139, "127.0.0.1");
+        PolyglotMain polyglotMain = new PolyglotMain(8139, "127.0.0.1", "./saga.log");
         Runtime.getRuntime().addShutdownHook(new Thread(() -> polyglotMain.stop()));
         polyglotMain.start();
     }

@@ -16,7 +16,7 @@ public class PolyglotMainTest {
 
     @Test
     public void thatCoordinatorCanExecuteSaga() throws URISyntaxException, IOException, InterruptedException {
-        PolyglotMain polyglotMain = new PolyglotMain(8342, "127.0.0.1").start();
+        PolyglotMain polyglotMain = new PolyglotMain(8342, "127.0.0.1", "target/saga.log").start();
 
         HttpClient httpClient = HttpClient.newBuilder().build();
         HttpRequest httpRequest = HttpRequest

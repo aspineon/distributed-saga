@@ -10,29 +10,31 @@ import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.SagaExecution;
 import no.ssb.saga.execution.SagaHandoffControl;
 import no.ssb.saga.execution.adapter.AdapterLoader;
+import no.ssb.saga.execution.sagalog.SagaLog;
 import no.ssb.saga.execution.sagalog.SagaLogEntry;
 import no.ssb.saga.samples.polyglot.adapter.PublishToPubSub;
 import no.ssb.saga.samples.polyglot.adapter.WriteToGraph;
 import no.ssb.saga.samples.polyglot.adapter.WriteToObjectStore;
 import no.ssb.saga.samples.polyglot.adapter.WriteToRDBMS;
-import no.ssb.saga.samples.polyglot.sagalog.InMemorySagaLog;
 import no.ssb.saga.serialization.SagaSerializer;
 import org.json.JSONObject;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.stream.Collectors;
 
 public class PolyglotHttpHandler implements HttpHandler {
     private final SelectableThreadPoolExectutor executorService;
+    private final SagaLog sagaLog;
     private final AdapterLoader adapterLoader;
 
-    public PolyglotHttpHandler(SelectableThreadPoolExectutor executorService) {
+    public PolyglotHttpHandler(SelectableThreadPoolExectutor executorService, SagaLog sagaLog) {
         this.executorService = executorService;
+        this.sagaLog = sagaLog;
 
         /*
          * Register all adapters/drivers that will be used in sagas.
@@ -88,12 +90,6 @@ public class PolyglotHttpHandler implements HttpHandler {
             inputRoot.put("data", new String(buf, StandardCharsets.UTF_8));
 
             /*
-             * Create a new in-memory saga-log for this execution. Typically this will be replaced
-             * with integration to an external highly-available log with low-latency.
-             */
-            InMemorySagaLog sagaLog = new InMemorySagaLog();
-
-            /*
              * Execute Saga
              */
             String executionId = UUID.randomUUID().toString();
@@ -126,7 +122,24 @@ public class PolyglotHttpHandler implements HttpHandler {
             sb.append("\"saga\":").append(SagaSerializer.toJson(polyglotSaga));
             sb.append(",");
             sb.append("\"log\":[");
-            sb.append(sagaLog.readEntries(executionId).stream().map(SagaLogEntry::toString).map(s -> JSONObject.quote(s)).collect(Collectors.joining(",\n")));
+            List<SagaLogEntry> sagaLogEntries = sagaLog.readEntries(executionId);
+            for (int i = 0; i < sagaLogEntries.size(); i++) {
+                SagaLogEntry sagaLogEntry = sagaLogEntries.get(i);
+                if (i > 0) {
+                    sb.append(",");
+                }
+                sb.append("{");
+                sb.append("\"executionId\":").append(JSONObject.quote(sagaLogEntry.executionId)).append(",");
+                sb.append("\"type\":").append(JSONObject.quote(sagaLogEntry.entryType.toString())).append(",");
+                sb.append("\"nodeId\":").append(JSONObject.quote(sagaLogEntry.nodeId)).append(",");
+                if (sagaLogEntry.sagaName != null) {
+                    sb.append("\"sagaName\":").append(JSONObject.quote(sagaLogEntry.sagaName)).append(",");
+                }
+                if (sagaLogEntry.jsonData != null) {
+                    sb.append("\"jsonData\":").append(sagaLogEntry.jsonData);
+                }
+                sb.append("}");
+            }
             sb.append("]");
             sb.append("}");
             ByteBuffer responseData = ByteBuffer.wrap(sb.toString().getBytes(StandardCharsets.UTF_8));
