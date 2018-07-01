@@ -77,10 +77,12 @@ public class SagaExecution {
         SagaTraversalResult traversalResult = sagaTraversal.forward(handoffFuture, completionFuture, ste -> {
             SagaAdapter adapter = adapterLoader.load(ste.node);
             if (Saga.ID_START.equals(ste.node.id)) {
-                String serializedSagaInput = ofNullable(sagaInput)
-                        .map(i -> adapter.serializer().serialize(i)) // safe unchecked call
-                        .orElse(null);
-                sagaLog.write(startSaga(executionId, saga.name, serializedSagaInput));
+                if (!recovery) {
+                    String serializedSagaInput = ofNullable(sagaInput)
+                            .map(i -> adapter.serializer().serialize(i)) // safe unchecked call
+                            .orElse(null);
+                    sagaLog.write(startSaga(executionId, saga.name, serializedSagaInput));
+                }
                 handoffFuture.complete(new SagaHandoffResult(executionId));
                 return null;
             }
@@ -140,7 +142,9 @@ public class SagaExecution {
         return new SagaHandoffControl(sagaInput, executionId, saga, sagaLog, adapterLoader, traversalResult, handoffFuture, completionFuture);
     }
 
-    private void rollbackRecovery(String executionId, Object sagaInput, SelectableFuture<SagaHandoffResult> completionFuture, AtomicInteger pendingWalks, BlockingQueue<SelectableFuture<List<String>>> futureThreadWalk, ConcurrentHashMap<String, SelectableFuture<SelectableFuture<Object>>> futureById) {
+    private void rollbackRecovery(String executionId, Object
+            sagaInput, SelectableFuture<SagaHandoffResult> completionFuture, AtomicInteger
+                                          pendingWalks, BlockingQueue<SelectableFuture<List<String>>> futureThreadWalk, ConcurrentHashMap<String, SelectableFuture<SelectableFuture<Object>>> futureById) {
         Map<String, List<SagaLogEntry>> sagaLogEntriesBySagaNodeId = sagaLog.getSnapshotOfSagaLogEntriesByNodeId(executionId);
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
         sagaTraversal.backward(null, completionFuture, pendingWalks, futureThreadWalk, futureById, ste -> {
@@ -183,7 +187,8 @@ public class SagaExecution {
         });
     }
 
-    private Map<SagaNode, Object> getDependeesOutputByNode(Map<String, List<SagaLogEntry>> sagaLogEntriesBySagaNodeId, SagaNode node, SagaAdapter adapter) {
+    private Map<SagaNode, Object> getDependeesOutputByNode
+            (Map<String, List<SagaLogEntry>> sagaLogEntriesBySagaNodeId, SagaNode node, SagaAdapter adapter) {
         Map<SagaNode, Object> dependeesOutputByNode = null;
         for (SagaNode dependeeNode : node.incoming) {
             List<SagaLogEntry> dependeeEntries = sagaLogEntriesBySagaNodeId.get(dependeeNode.id);
