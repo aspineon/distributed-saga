@@ -50,7 +50,10 @@ public class FileSagaLog implements SagaLog {
             try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(sagaLogFile), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = br.readLine()) != null) {
-                    result.add(SagaLogEntry.from(line));
+                    SagaLogEntry entry = SagaLogEntry.from(line);
+                    if (executionId.equals(entry.executionId)) {
+                        result.add(entry);
+                    }
                 }
             } catch (IOException e) {
                 throw new RuntimeException(e);
