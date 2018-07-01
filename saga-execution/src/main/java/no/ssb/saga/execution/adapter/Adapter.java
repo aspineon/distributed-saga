@@ -3,28 +3,31 @@ package no.ssb.saga.execution.adapter;
 import no.ssb.saga.api.SagaNode;
 
 import java.util.Map;
-import java.util.function.Function;
+import java.util.function.BiConsumer;
+import java.util.function.BiFunction;
 
-public class Adapter<I, O> implements SagaAdapter<I, O> {
+public class Adapter<O> implements SagaAdapter<O> {
 
     protected final Class<O> outputClazz;
     protected final String name;
-    private final Function<I, O> action;
-    private final Function<I, O> compensatingAction;
+    private final BiFunction<Object, Map<SagaNode, Object>, O> action;
+    private final BiConsumer<Object, O> compensatingConsumer;
 
     public Adapter(Class<O> outputClazz, String name) {
-        this(outputClazz, name, input -> null, input -> null);
+        this(outputClazz, name, (sagaInput, dependeesOutput) -> null, (sagaInput, dependeesOutput) -> {
+        });
     }
 
-    public Adapter(Class<O> outputClazz, String name, Function<I, O> action) {
-        this(outputClazz, name, action, input -> null);
+    public Adapter(Class<O> outputClazz, String name, BiFunction<Object, Map<SagaNode, Object>, O> action) {
+        this(outputClazz, name, action, (sagaInput, dependeesOutput) -> {
+        });
     }
 
-    public Adapter(Class<O> outputClazz, String name, Function<I, O> action, Function<I, O> compensatingAction) {
+    public Adapter(Class<O> outputClazz, String name, BiFunction<Object, Map<SagaNode, Object>, O> action, BiConsumer<Object, O> compensatingConsumer) {
         this.outputClazz = outputClazz;
         this.name = name;
         this.action = action;
-        this.compensatingAction = compensatingAction;
+        this.compensatingConsumer = compensatingConsumer;
     }
 
     @Override
@@ -33,22 +36,17 @@ public class Adapter<I, O> implements SagaAdapter<I, O> {
     }
 
     @Override
-    public I prepareInputFromDependees(Object startInput, Map<SagaNode, Object> dependeesOutput) {
-        return (I) startInput;
+    public O executeAction(Object sagaInput, Map<SagaNode, Object> dependeesOutput) {
+        return action.apply(sagaInput, dependeesOutput);
     }
 
     @Override
-    public O executeAction(I input) {
-        return action.apply(input);
-    }
-
-    @Override
-    public O executeCompensatingAction(I input) {
-        return compensatingAction.apply(input);
+    public void executeCompensatingAction(Object sagaInput, O actionOutput) {
+        compensatingConsumer.accept(sagaInput, actionOutput);
     }
 
     @Override
     public ActionOutputSerializer<O> serializer() {
-        return new ActionOutputSerializerToStringAndStringConstructor<O>(outputClazz);
+        return new ActionOutputSerializerToStringAndStringConstructor<>(outputClazz);
     }
 }

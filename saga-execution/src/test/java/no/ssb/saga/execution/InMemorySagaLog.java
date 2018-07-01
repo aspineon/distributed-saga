@@ -1,4 +1,4 @@
-package no.ssb.saga.samples.polyglot.sagalog;
+package no.ssb.saga.execution;
 
 import no.ssb.saga.execution.sagalog.SagaLog;
 import no.ssb.saga.execution.sagalog.SagaLogEntry;

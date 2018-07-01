@@ -1,15 +1,28 @@
 package no.ssb.saga.execution.sagalog;
 
-import no.ssb.saga.api.SagaNode;
-import no.ssb.saga.execution.adapter.ActionOutputSerializer;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 public interface SagaLog {
 
-    boolean ACTION = true;
-    boolean COMPENSATING_ACTION = false;
+    String write(SagaLogEntry entry);
 
-    boolean BEFORE = true;
-    boolean AFTER = false;
+    List<SagaLogEntry> readEntries(String executionId);
 
-    String write(boolean beforeOrAfter, boolean actionOrCompensatingAction, SagaNode node, String executionId, ActionOutputSerializer serializer, Object data);
+    default Map<String, List<SagaLogEntry>> getSnapshotOfSagaLogEntriesByNodeId(String executionId) {
+        Map<String, List<SagaLogEntry>> recoverySagaLogEntriesBySagaNodeId = new LinkedHashMap<>();
+        List<SagaLogEntry> entries = readEntries(executionId);
+        for (SagaLogEntry entry : entries) {
+            List<SagaLogEntry> nodeEntries = recoverySagaLogEntriesBySagaNodeId.get(entry.nodeId);
+            if (nodeEntries == null) {
+                nodeEntries = new ArrayList<>(4);
+                recoverySagaLogEntriesBySagaNodeId.put(entry.nodeId, nodeEntries);
+            }
+            nodeEntries.add(entry);
+        }
+        return recoverySagaLogEntriesBySagaNodeId;
+    }
+
 }

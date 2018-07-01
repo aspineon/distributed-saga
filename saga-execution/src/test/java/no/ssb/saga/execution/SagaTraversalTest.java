@@ -47,8 +47,8 @@ public class SagaTraversalTest {
                 .end();
 
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
-        sagaTraversal.forward(validateForwardTraversalOrder(saga)).waitForCompletion(10, TimeUnit.SECONDS);
-        sagaTraversal.backward(validateBackwardTraversalOrder(saga)).waitForCompletion(10, TimeUnit.SECONDS);
+        sagaTraversal.forward(validateForwardTraversalOrder(saga)).waitForCompletionAndCheckThatAllNodesWereWalkedAndVisited(10, TimeUnit.SECONDS);
+        sagaTraversal.backward(validateBackwardTraversalOrder(saga)).waitForCompletionAndCheckThatAllNodesWereWalkedAndVisited(10, TimeUnit.SECONDS);
     }
 
     @Test
@@ -59,8 +59,8 @@ public class SagaTraversalTest {
                 .end();
 
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
-        sagaTraversal.forward(validateForwardTraversalOrder(saga)).waitForCompletion(10, TimeUnit.SECONDS);
-        sagaTraversal.backward(validateBackwardTraversalOrder(saga)).waitForCompletion(10, TimeUnit.SECONDS);
+        sagaTraversal.forward(validateForwardTraversalOrder(saga)).waitForCompletionAndCheckThatAllNodesWereWalkedAndVisited(10, TimeUnit.SECONDS);
+        sagaTraversal.backward(validateBackwardTraversalOrder(saga)).waitForCompletionAndCheckThatAllNodesWereWalkedAndVisited(10, TimeUnit.SECONDS);
     }
 
     @Test
@@ -78,9 +78,9 @@ public class SagaTraversalTest {
 
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
         sagaTraversal.forward(validateForwardTraversalOrder(saga, printVisitResults()))
-                .waitForCompletion(10, TimeUnit.SECONDS);
+                .waitForCompletionAndCheckThatAllNodesWereWalkedAndVisited(10, TimeUnit.SECONDS);
         sagaTraversal.backward(validateBackwardTraversalOrder(saga, printVisitResults()))
-                .waitForCompletion(10, TimeUnit.SECONDS);
+                .waitForCompletionAndCheckThatAllNodesWereWalkedAndVisited(10, TimeUnit.SECONDS);
     }
 
     @Test
@@ -105,12 +105,12 @@ public class SagaTraversalTest {
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
         //System.out.println("FORWARD:");
         sagaTraversal.forward(validateForwardTraversalOrder(saga, printVisitResults()))
-                .complete(10, TimeUnit.SECONDS, printWalks(), (node, output) -> {
+                .waitForCompletionAndCheckThatAllNodesWereWalkedAndVisited(10, TimeUnit.SECONDS, printWalks(), (node, output) -> {
                 });
         //System.out.println();
         //System.out.println("BACKWARD:");
         sagaTraversal.backward(validateBackwardTraversalOrder(saga, printVisitResults()))
-                .complete(10, TimeUnit.SECONDS, printWalks(), (node, output) -> {
+                .waitForCompletionAndCheckThatAllNodesWereWalkedAndVisited(10, TimeUnit.SECONDS, printWalks(), (node, output) -> {
                 });
         //System.out.println();
     }

@@ -8,8 +8,13 @@ import java.util.Map;
  * Implementors of adapter must provide a stateless, re-usage adapter that
  * is safe for usage with multiple threads. This should be easy enough as
  * all needed context is passed as arguments to every method.
+ *
+ * @param <OUTPUT> the output type produced by the action and compensating action
+ *                 execution methods. The generic type is used to ensure type-safety
+ *                 between instances of this class and instances of corresponding
+ *                 serialization classes.
  */
-public interface SagaAdapter<INPUT, OUTPUT> {
+public interface SagaAdapter<OUTPUT> {
 
     /**
      * The adapter name as it should appear in the saga-log. Note that this name
@@ -22,31 +27,24 @@ public interface SagaAdapter<INPUT, OUTPUT> {
     String name();
 
     /**
-     * Prepare input needed for processing of action or compensating action
-     * of the saga-node represented by this adapter. The prepared input should
-     * in turn be passed to the {@link #executeAction(INPUT) executeAction}
-     * or {@link #executeCompensatingAction(INPUT) executeCompensatingAction} method.
-     * This method should generally be used to prepare input that is compatible with
-     * the execute methods.
-     *
-     * @param sagaRequestData the original request data associated with this saga.
-     * @param dependeesOutput the output from the execution of the dependees of the saga-node
+     * @param sagaInput       the original request data associated with this saga.
+     * @param dependeesOutput the output from the execution of the dejpendees of the saga-node
      *                        represented by this adapter.
-     * @return the input to be passed when this adapter's action or compensating action is called.
+     * @return the output from executing the action.
+     * @throws AbortSagaException action implementation may choose to throw an AbortSagaException
+     *                            in order to trigger a full saga rollback.
      */
-    INPUT prepareInputFromDependees(Object sagaRequestData, Map<SagaNode, Object> dependeesOutput);
+    OUTPUT executeAction(Object sagaInput, Map<SagaNode, Object> dependeesOutput) throws AbortSagaException;
 
     /**
-     * @param input execute the action that this adapter implicitly represents using input.
-     * @return the output from executing the action as a json string.
+     * Execute the compensating action that this adapter implicitly represents using sagaInput.
+     * Upon returning normally, it will be assumed that the compensating action was successfully
+     * executed.
+     *
+     * @param sagaInput    the original request data associated with this saga.
+     * @param actionOutput the output from executing the {@link #executeAction(Object, Map)} method.
      */
-    OUTPUT executeAction(INPUT input);
-
-    /**
-     * @param input execute the compensating action that this adapter implicitly represents using input.
-     * @return the output from executing the action as a json string.
-     */
-    OUTPUT executeCompensatingAction(INPUT input);
+    void executeCompensatingAction(Object sagaInput, OUTPUT actionOutput);
 
     /**
      * @return a serializer than can be used to serialize and de-serialize any object output

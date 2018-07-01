@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.BiConsumer;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -61,6 +62,7 @@ public class Saga {
     }
 
     public static class SagaBuilder {
+        private final static Pattern legalSagaNamePattern = Pattern.compile("[^{\\n]*");
         private final static Pattern legalIdPattern = Pattern.compile("\\p{Graph}*");
         private final static Pattern legalAdapterPattern = Pattern.compile("\\p{Graph}*");
 
@@ -68,6 +70,10 @@ public class Saga {
         final HashMap<String, NodeState> nodeStateById = new LinkedHashMap<>();
 
         private SagaBuilder(String sagaName) {
+            Matcher m = legalSagaNamePattern.matcher(sagaName);
+            if (!m.matches()) {
+                throw new SagaException("sagaName must not contain the '{' (left-curly-bracket) or '\\n' (newline) character");
+            }
             this.sagaName = sagaName;
         }
 

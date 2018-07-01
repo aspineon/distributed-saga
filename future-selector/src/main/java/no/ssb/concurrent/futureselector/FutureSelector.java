@@ -29,6 +29,10 @@ public class FutureSelector<F, C> {
         return taskCount.get() > 0;
     }
 
+    public boolean moreThanOnePending() {
+        return taskCount.get() > 1;
+    }
+
     public int add(SelectableFuture<F> selectableFuture, C control) {
         selectableFuture.registerWithDoneQueueAndMarkSelectableIfDone(doneQueue, new Selection<>(selectableFuture, control));
         return taskCount.incrementAndGet();
