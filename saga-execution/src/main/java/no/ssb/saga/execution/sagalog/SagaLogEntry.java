@@ -28,6 +28,47 @@ public class SagaLogEntry {
         return new SagaLogEntry(executionId, SagaLogEntryType.Comp, nodeId, null, null);
     }
 
+    public static SagaLogEntry from(String line) {
+
+        // mandatory log-fields
+
+        int executionIdEndIndex = line.indexOf(' ');
+        String executionId = line.substring(0, executionIdEndIndex);
+        line = line.substring(executionIdEndIndex + 1);
+
+        int entryTypeEndIndex = line.indexOf(' ');
+        SagaLogEntryType entryType = SagaLogEntryType.valueOf(line.substring(0, entryTypeEndIndex));
+        line = line.substring(entryTypeEndIndex + 1);
+
+        int nodeIdEndIdex = line.indexOf(' ');
+        if (nodeIdEndIdex == -1) {
+            String nodeId = line;
+            return new SagaLogEntry(executionId, entryType, nodeId, null, null);
+        }
+
+        String nodeId = line.substring(0, nodeIdEndIdex);
+        line = line.substring(nodeIdEndIdex + 1);
+
+        // optional log-fields
+        if (Saga.ID_START.equals(nodeId)) {
+            int jsonDataBeginIndex = line.indexOf('{');
+            if (jsonDataBeginIndex == -1) {
+                String sagaName = line.substring(0, line.length() - 1);
+                return new SagaLogEntry(executionId, entryType, nodeId, sagaName, null);
+            }
+            String sagaName = line.substring(0, jsonDataBeginIndex - 1);
+            String jsonData = line.substring(jsonDataBeginIndex);
+            return new SagaLogEntry(executionId, entryType, nodeId, sagaName, jsonData);
+        }
+
+        int jsonDataBeginIndex = line.indexOf('{');
+        if (jsonDataBeginIndex == -1) {
+            return new SagaLogEntry(executionId, entryType, nodeId, null, null);
+        }
+        String jsonData = line.substring(jsonDataBeginIndex);
+        return new SagaLogEntry(executionId, entryType, nodeId, null, jsonData);
+    }
+
     public final String executionId;
     public final SagaLogEntryType entryType;
     public final String nodeId;
