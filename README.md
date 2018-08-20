@@ -1,8 +1,7 @@
 # Distributed Saga library and samples
 
 This is a collection of java libraries that constitute an implementation of the distributed-saga pattern.
-The libraries can be used to build distributed systems that have consistency guarantees and that
-scale well at the same time. The polyglot-persistence sample application under the saga-samples module
+The libraries can be used to build distributed systems that have well-defined fault-tolerance and recovery mechanisms. The polyglot-persistence sample application under the saga-samples module
 demonstrate the full use of all the distributed-saga libraries and is a good place to start.
 
 One goal of this project is a reusable and clean Java 10 library implementation of the distributed-saga 
