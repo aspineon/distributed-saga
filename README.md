@@ -127,3 +127,12 @@ https://github.com/aphyr/dist-sagas/blob/master/sagas.pdf
 
 Caitie McCaffrey has some very educational presentations on distributed sagas, here's one:
 https://speakerdeck.com/caitiem20/distributed-sagas-a-protocol-for-coordinating-microservices
+
+Chris Richardson has a web-page
+https://microservices.io/patterns/data/saga.html
+
+Camunda is doing something similar, here is a blog post
+https://blog.bernd-ruecker.com/saga-how-to-implement-complex-business-transactions-without-two-phase-commit-e00aa41a1b1b
+
+Pat Helland (Amazon) has written the "Life beyond Distributed Transactions" paper
+http://adrianmarriott.net/logosroot/papers/LifeBeyondTxns.pdf
