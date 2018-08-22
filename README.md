@@ -4,7 +4,7 @@ This is a collection of java libraries that constitute an implementation of the 
 The libraries can be used to build distributed systems that have well-defined fault-tolerance and recovery mechanisms. The polyglot-persistence sample application under the saga-samples module
 demonstrate the full use of all the distributed-saga libraries and is a good place to start.
 
-One goal of this project is a reusable and clean Java 10 library implementation of the distributed-saga 
+One goal of this project is a reusable and clean Java 11 library implementation of the distributed-saga 
 pattern with zero mandatory dependencies. The only external dependency is added by the saga-serialization
 library to org.json, but this library is so small that it can literally be rewritten within minutes to fit
 any dependency requirements. Any other dependencies that is used during the build and test phase is there
@@ -108,11 +108,7 @@ for pretty-printing of json
 
 # Development environment notes
 
-The project has been tested to work with maven 3.5.2 and Zulu for Java 10 (OpenJDK 10.0.1) from Azul Systems.
-
-If you are using IntelliJ IDEA to build and run the tests or samples you will need to add `--add-modules=jdk.incubator.httpclient`
-to `Additional command line parameters:` field in the `Settings -> Build, Execution, Deployement -> Compiler -> Java Compiler # For current project`
-page.
+The project has been tested to work with maven 3.5.2 and Zulu for Java 11 (OpenJDK 11-ea) from Azul Systems.
 
 
 # Related work
