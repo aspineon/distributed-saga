@@ -4,6 +4,7 @@ module no.ssb.saga.samples.polyglot {
     requires no.ssb.saga.serialization;
     requires no.ssb.concurrent.futureselector;
     requires java.base;
+    requires java.net.http;
     requires undertow.core;
     requires json;
 }
