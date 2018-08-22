@@ -96,7 +96,6 @@
                 <!-- workaround for: https://issues.jboss.org/browse/UNDERTOW-1355 -->
                 <configuration>
                     <argLine>
-                        --add-modules=jdk.incubator.httpclient
                         --illegal-access=deny
                     </argLine>
                 </configuration>
