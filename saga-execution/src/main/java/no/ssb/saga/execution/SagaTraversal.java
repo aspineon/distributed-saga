@@ -87,7 +87,7 @@ public class SagaTraversal {
 
         ConcurrentHashMap<String, SagaNode> visitedById = new ConcurrentHashMap<>();
         visitedById.putIfAbsent(firstNode.id, firstNode);
-        SelectableFuture<List<String>> future = (SelectableFuture<List<String>>) executorService.submit(() -> {
+        SelectableFuture<List<String>> future = executorService.submit(() -> {
                     try {
                         return traverse(
                                 pendingWalks,
@@ -220,7 +220,7 @@ public class SagaTraversal {
         // traverse all but last child asynchronously
         for (int i = 0; i < effectiveChildren.size() - 1; i++) {
             SagaNode child = effectiveChildren.get(i);
-            SelectableFuture<List<String>> future = (SelectableFuture<List<String>>) executorService.submit(() -> {
+            SelectableFuture<List<String>> future = executorService.submit(() -> {
                 try {
                     return traverse(pendingWalks, futureThreadWalk, new ArrayList<>(), forward, child, childAncestors, visitedById, futureById, handoffFuture, completionFuture, visit);
                 } catch (Throwable t) {

@@ -35,4 +35,19 @@ public class SelectableThreadPoolExectutor extends ThreadPoolExecutor {
     protected <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
         return new SelectableFuture<>(callable);
     }
+
+    @Override
+    public SelectableFuture<?> submit(Runnable task) {
+        return (SelectableFuture<?>) super.submit(task);
+    }
+
+    @Override
+    public <T> SelectableFuture<T> submit(Runnable task, T result) {
+        return (SelectableFuture<T>) super.submit(task, result);
+    }
+
+    @Override
+    public <T> SelectableFuture<T> submit(Callable<T> task) {
+        return (SelectableFuture<T>) super.submit(task);
+    }
 }
