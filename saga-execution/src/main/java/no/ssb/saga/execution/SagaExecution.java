@@ -19,6 +19,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 
 import static java.util.Optional.ofNullable;
 import static no.ssb.saga.execution.sagalog.SagaLogEntry.abort;
@@ -63,7 +64,7 @@ public class SagaExecution {
      * @param recovery
      * @return
      */
-    public SagaHandoffControl executeSaga(String executionId, Object sagaInput, boolean recovery) {
+    public SagaHandoffControl executeSaga(String executionId, Object sagaInput, boolean recovery, Consumer<SagaHandoffResult> onComplete) {
         SelectableFuture<SagaHandoffResult> handoffFuture = new SelectableFuture<>(null);
         SelectableFuture<SagaHandoffResult> completionFuture = new SelectableFuture<>(null);
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
@@ -88,7 +89,9 @@ public class SagaExecution {
             }
             if (Saga.ID_END.equals(ste.node.id)) {
                 sagaLog.write(endSaga(executionId));
-                completionFuture.complete(new SagaHandoffResult(executionId));
+                SagaHandoffResult result = new SagaHandoffResult(executionId);
+                completionFuture.complete(result);
+                onComplete.accept(result);
                 return null;
             }
             List<SagaLogEntry> sagaLogEntries = recoverySagaLogEntriesBySagaNodeId.get(ste.node.id);
@@ -125,7 +128,7 @@ public class SagaExecution {
                     // ensure we catch all saga-log entries of forward traversal before running recovery
                     sagaTraversalResult.waitForThreadWalksToComplete();
 
-                    rollbackRecovery(executionId, sagaInput, completionFuture, sagaTraversalResult.pendingWalks, sagaTraversalResult.futureThreadWalk, new ConcurrentHashMap<>());
+                    rollbackRecovery(executionId, sagaInput, completionFuture, sagaTraversalResult.pendingWalks, sagaTraversalResult.futureThreadWalk, new ConcurrentHashMap<>(), onComplete);
                 });
 
                 return null;
@@ -142,9 +145,13 @@ public class SagaExecution {
         return new SagaHandoffControl(sagaInput, executionId, saga, sagaLog, adapterLoader, traversalResult, handoffFuture, completionFuture);
     }
 
-    private void rollbackRecovery(String executionId, Object
-            sagaInput, SelectableFuture<SagaHandoffResult> completionFuture, AtomicInteger
-                                          pendingWalks, BlockingQueue<SelectableFuture<List<String>>> futureThreadWalk, ConcurrentHashMap<String, SelectableFuture<SelectableFuture<Object>>> futureById) {
+    private void rollbackRecovery(String executionId,
+                                  Object sagaInput,
+                                  SelectableFuture<SagaHandoffResult> completionFuture,
+                                  AtomicInteger pendingWalks,
+                                  BlockingQueue<SelectableFuture<List<String>>> futureThreadWalk,
+                                  ConcurrentHashMap<String, SelectableFuture<SelectableFuture<Object>>> futureById,
+                                  Consumer<SagaHandoffResult> onComplete) {
         Map<String, List<SagaLogEntry>> sagaLogEntriesBySagaNodeId = sagaLog.getSnapshotOfSagaLogEntriesByNodeId(executionId);
         SagaTraversal sagaTraversal = new SagaTraversal(executorService, saga);
         sagaTraversal.backward(null, completionFuture, pendingWalks, futureThreadWalk, futureById, ste -> {
@@ -153,7 +160,9 @@ public class SagaExecution {
             }
             if (Saga.ID_START.equals(ste.node.id)) {
                 sagaLog.write(endSaga(executionId));
-                completionFuture.complete(new SagaHandoffResult(executionId));
+                SagaHandoffResult result = new SagaHandoffResult(executionId);
+                completionFuture.complete(result);
+                onComplete.accept(result);
                 return null;
             }
             SagaAdapter adapter = adapterLoader.load(ste.node);

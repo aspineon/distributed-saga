@@ -98,7 +98,8 @@ public class PolyglotHttpHandler implements HttpHandler {
             long executionTime;
             try {
                 long executionStartTime = System.currentTimeMillis();
-                SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, inputRoot, false);
+                SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, inputRoot, false, r -> {
+                });
                 handoffControl.getHandoffFuture().get(30, TimeUnit.SECONDS); // wait for saga handoff
                 handoffTime = System.currentTimeMillis() - executionStartTime;
                 handoffControl.getCompletionFuture().get(5, TimeUnit.MINUTES); // wait for saga completion

@@ -69,7 +69,8 @@ public class SagaExecutionTest {
         };
         SagaExecution sagaExecution = new SagaExecution(sagaLog, executorService, saga, adapterLoader);
         String executionId = UUID.randomUUID().toString();
-        SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, requestData, false);
+        SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, requestData, false, r -> {
+        });
         try {
             handoffControl.getCompletionFuture().get(10, TimeUnit.MINUTES);
         } catch (InterruptedException | ExecutionException | TimeoutException e) {
