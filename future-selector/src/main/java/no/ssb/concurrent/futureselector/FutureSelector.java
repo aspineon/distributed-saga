@@ -21,7 +21,7 @@ public class FutureSelector<F, C> {
         } catch (InterruptedException e) {
             throw launder(e);
         }
-        taskCount.decrementAndGet();
+        taskCount.decrementAndGet(); // always decrement taskCount only after taking the task off the queue.
         return selected;
     }
 
@@ -34,7 +34,10 @@ public class FutureSelector<F, C> {
     }
 
     public int add(SelectableFuture<F> selectableFuture, C control) {
+        // taskCount must be incremented before adding task to queue in order to avoid race-condition with pending methods.
+        int countAfter = taskCount.incrementAndGet();
+
         selectableFuture.registerWithDoneQueueAndMarkSelectableIfDone(doneQueue, new Selection<>(selectableFuture, control));
-        return taskCount.incrementAndGet();
+        return countAfter;
     }
 }
