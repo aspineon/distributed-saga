@@ -6,7 +6,7 @@ jdk:
 stages:
 - install
 - name: deploy
-  if: branch = master
+  if: tag =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 jobs:
   include:
   - stage: install
