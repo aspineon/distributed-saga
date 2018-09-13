@@ -3,10 +3,18 @@ notifications:
   email: false
 jdk:
 - openjdk11
-install: echo 'Run Maven Tests'
-script:
-- mvn clean install -Dmaven.javadoc.skip=true -B -V
-#after_success: mvn deploy --settings .travis/settings.xml -DskipTests -B -V
+stages:
+- install
+- name: deploy
+  if: branch = master
+jobs:
+  include:
+  - stage: install
+    script:
+    - mvn clean install -Dmaven.javadoc.skip=true -B -V
+  - stage: deploy
+    script:
+    - echo "Deploy stage.."
 branches:
   only:
   - master
