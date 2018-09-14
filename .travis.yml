@@ -6,12 +6,12 @@ jdk:
 stages:
 - install
 - name: deploy
-  if: branch = master
+  if: tag =~ /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 jobs:
   include:
   - stage: install
     script:
-    - mvn clean install -Dmaven.javadoc.skip=true -B -V
+    - mvn --settings=.travis.settings.xml clean install -B -V
   - stage: deploy
     script:
     - echo "Deploy stage.."

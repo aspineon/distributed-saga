@@ -1,0 +1,13 @@
+<settings>
+    <servers>
+        <server>
+            <id>gpg</id>
+            <passphrase>${env.MAVEN_GPG_PLUGIN_KEY}</passphrase>
+        </server>
+        <server>
+            <id>ossrh</id>
+            <username>${env.CI_OSS_SONATYPE_USERNAME}</username>
+            <password>${env.CI_OSS_SONATYPE_PASSWORD}</password>
+        </server>
+    </servers>
+</settings>
