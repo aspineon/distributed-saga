@@ -42,7 +42,7 @@
     <dependencies>
         <dependency>
             <groupId>no.ssb.saga</groupId>
-            <artifactId>saga-api</artifactId>
+            <artifactId>distributed-saga-api</artifactId>
             <version>0.1-SNAPSHOT</version>
         </dependency>
         <dependency>

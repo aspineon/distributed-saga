@@ -20,7 +20,6 @@
     </properties>
 
     <modules>
-        <module>saga-api</module>
         <module>saga-execution</module>
         <module>saga-samples</module>
         <module>saga-serialization</module>
