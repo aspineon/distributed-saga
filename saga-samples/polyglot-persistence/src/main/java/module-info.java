@@ -6,5 +6,5 @@ module no.ssb.saga.samples.polyglot {
     requires java.base;
     requires java.net.http;
     requires undertow.core;
-    requires json;
+    requires org.json;
 }

@@ -43,22 +43,27 @@
         <dependency>
             <groupId>no.ssb.saga</groupId>
             <artifactId>distributed-saga-api</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <version>0.1</version>
         </dependency>
         <dependency>
             <groupId>no.ssb.saga</groupId>
-            <artifactId>saga-serialization</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <artifactId>distributed-saga-serialization</artifactId>
+            <version>0.1.1</version>
         </dependency>
         <dependency>
             <groupId>no.ssb.saga</groupId>
-            <artifactId>saga-execution</artifactId>
-            <version>0.1-SNAPSHOT</version>
+            <artifactId>distributed-saga-execution</artifactId>
+            <version>0.1</version>
         </dependency>
         <dependency>
             <groupId>io.undertow</groupId>
             <artifactId>undertow-core</artifactId>
             <version>${undertow.io.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20180813</version>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>
