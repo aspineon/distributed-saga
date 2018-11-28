@@ -23,9 +23,6 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class PolyglotHttpHandler implements HttpHandler {
     private final SelectableThreadPoolExectutor executorService;
@@ -47,7 +44,7 @@ public class PolyglotHttpHandler implements HttpHandler {
     }
 
     @Override
-    public void handleRequest(HttpServerExchange exchange) throws Exception {
+    public void handleRequest(HttpServerExchange exchange) {
         if (exchange.isInIoThread()) {
             exchange.dispatch(this);
             return;
@@ -94,20 +91,13 @@ public class PolyglotHttpHandler implements HttpHandler {
              */
             String executionId = UUID.randomUUID().toString();
             SagaExecution sagaExecution = new SagaExecution(sagaLog, executorService, polyglotSaga, adapterLoader);
-            long handoffTime;
-            long executionTime;
-            try {
-                long executionStartTime = System.currentTimeMillis();
-                SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, inputRoot, false, r -> {
-                });
-                handoffControl.getHandoffFuture().get(30, TimeUnit.SECONDS); // wait for saga handoff
-                handoffTime = System.currentTimeMillis() - executionStartTime;
-                handoffControl.getCompletionFuture().get(5, TimeUnit.MINUTES); // wait for saga completion
-                executionTime = System.currentTimeMillis() - executionStartTime;
-            } catch (InterruptedException | ExecutionException | TimeoutException e) {
-                throw new RuntimeException(e);
-            }
-
+            long executionStartTime = System.currentTimeMillis();
+            SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, inputRoot, false, r -> {
+            });
+            handoffControl.getHandoffFuture().join(); // wait for saga handoff
+            long handoffTime = System.currentTimeMillis() - executionStartTime;
+            handoffControl.getCompletionFuture().join();
+            long executionTime = System.currentTimeMillis() - executionStartTime;
 
             /*
              * Respond with result
