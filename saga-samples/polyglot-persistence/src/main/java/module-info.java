@@ -7,4 +7,5 @@ module no.ssb.saga.samples.polyglot {
     requires java.net.http;
     requires undertow.core;
     requires org.json;
+    requires tape;
 }

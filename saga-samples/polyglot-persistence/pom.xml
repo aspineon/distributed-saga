@@ -53,7 +53,7 @@
         <dependency>
             <groupId>no.ssb.saga</groupId>
             <artifactId>distributed-saga-execution</artifactId>
-            <version>0.2</version>
+            <version>0.3-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>io.undertow</groupId>
@@ -64,6 +64,11 @@
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20180813</version>
+        </dependency>
+        <dependency>
+            <groupId>com.squareup.tape2</groupId>
+            <artifactId>tape</artifactId>
+            <version>2.0.0-beta1</version>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>

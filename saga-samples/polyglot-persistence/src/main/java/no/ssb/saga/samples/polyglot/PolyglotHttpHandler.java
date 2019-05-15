@@ -23,13 +23,14 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
-public class PolyglotHttpHandler implements HttpHandler {
+public class PolyglotHttpHandler<ID> implements HttpHandler {
     private final SelectableThreadPoolExectutor executorService;
-    private final SagaLog sagaLog;
+    private final SagaLog<ID> sagaLog;
     private final AdapterLoader adapterLoader;
 
-    public PolyglotHttpHandler(SelectableThreadPoolExectutor executorService, SagaLog sagaLog) {
+    public PolyglotHttpHandler(SelectableThreadPoolExectutor executorService, SagaLog<ID> sagaLog) {
         this.executorService = executorService;
         this.sagaLog = sagaLog;
 
@@ -113,21 +114,22 @@ public class PolyglotHttpHandler implements HttpHandler {
             sb.append("\"saga\":").append(SagaSerializer.toJson(polyglotSaga));
             sb.append(",");
             sb.append("\"log\":[");
-            List<SagaLogEntry> sagaLogEntries = sagaLog.readEntries(executionId);
+            List<SagaLogEntry<ID>> sagaLogEntries = sagaLog.readEntries(executionId).collect(Collectors.toList());
             for (int i = 0; i < sagaLogEntries.size(); i++) {
-                SagaLogEntry sagaLogEntry = sagaLogEntries.get(i);
+                SagaLogEntry<ID> sagaLogEntry = sagaLogEntries.get(i);
                 if (i > 0) {
                     sb.append(",");
                 }
                 sb.append("{");
-                sb.append("\"executionId\":").append(JSONObject.quote(sagaLogEntry.executionId)).append(",");
-                sb.append("\"type\":").append(JSONObject.quote(sagaLogEntry.entryType.toString())).append(",");
-                sb.append("\"nodeId\":").append(JSONObject.quote(sagaLogEntry.nodeId)).append(",");
-                if (sagaLogEntry.sagaName != null) {
-                    sb.append("\"sagaName\":").append(JSONObject.quote(sagaLogEntry.sagaName)).append(",");
+                sb.append("\"id\":").append(JSONObject.quote(String.valueOf(sagaLogEntry.getId()))).append(",");
+                sb.append("\"executionId\":").append(JSONObject.quote(sagaLogEntry.getExecutionId())).append(",");
+                sb.append("\"type\":").append(JSONObject.quote(sagaLogEntry.getEntryType().toString())).append(",");
+                sb.append("\"nodeId\":").append(JSONObject.quote(sagaLogEntry.getNodeId())).append(",");
+                if (sagaLogEntry.getSagaName() != null) {
+                    sb.append("\"sagaName\":").append(JSONObject.quote(sagaLogEntry.getSagaName())).append(",");
                 }
-                if (sagaLogEntry.jsonData != null) {
-                    sb.append("\"jsonData\":").append(sagaLogEntry.jsonData);
+                if (sagaLogEntry.getJsonData() != null) {
+                    sb.append("\"jsonData\":").append(sagaLogEntry.getJsonData());
                 }
                 sb.append("}");
             }
