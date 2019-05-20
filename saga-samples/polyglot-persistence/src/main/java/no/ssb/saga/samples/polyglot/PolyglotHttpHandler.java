@@ -25,12 +25,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-public class PolyglotHttpHandler<ID> implements HttpHandler {
+public class PolyglotHttpHandler implements HttpHandler {
     private final SelectableThreadPoolExectutor executorService;
-    private final SagaLog<ID> sagaLog;
+    private final SagaLog sagaLog;
     private final AdapterLoader adapterLoader;
 
-    public PolyglotHttpHandler(SelectableThreadPoolExectutor executorService, SagaLog<ID> sagaLog) {
+    public PolyglotHttpHandler(SelectableThreadPoolExectutor executorService, SagaLog sagaLog) {
         this.executorService = executorService;
         this.sagaLog = sagaLog;
 
@@ -114,14 +114,14 @@ public class PolyglotHttpHandler<ID> implements HttpHandler {
             sb.append("\"saga\":").append(SagaSerializer.toJson(polyglotSaga));
             sb.append(",");
             sb.append("\"log\":[");
-            List<SagaLogEntry<ID>> sagaLogEntries = sagaLog.readEntries(executionId).collect(Collectors.toList());
+            List<SagaLogEntry> sagaLogEntries = sagaLog.readEntries(executionId).collect(Collectors.toList());
             for (int i = 0; i < sagaLogEntries.size(); i++) {
-                SagaLogEntry<ID> sagaLogEntry = sagaLogEntries.get(i);
+                SagaLogEntry sagaLogEntry = sagaLogEntries.get(i);
                 if (i > 0) {
                     sb.append(",");
                 }
                 sb.append("{");
-                sb.append("\"id\":").append(JSONObject.quote(String.valueOf(sagaLogEntry.getId()))).append(",");
+                sb.append("\"id\":").append(JSONObject.quote(sagaLog.toString(sagaLogEntry.getId()))).append(",");
                 sb.append("\"executionId\":").append(JSONObject.quote(sagaLogEntry.getExecutionId())).append(",");
                 sb.append("\"type\":").append(JSONObject.quote(sagaLogEntry.getEntryType().toString())).append(",");
                 sb.append("\"nodeId\":").append(JSONObject.quote(sagaLogEntry.getNodeId())).append(",");
