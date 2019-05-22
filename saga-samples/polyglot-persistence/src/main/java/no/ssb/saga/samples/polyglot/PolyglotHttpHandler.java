@@ -10,13 +10,13 @@ import no.ssb.saga.api.Saga;
 import no.ssb.saga.execution.SagaExecution;
 import no.ssb.saga.execution.SagaHandoffControl;
 import no.ssb.saga.execution.adapter.AdapterLoader;
-import no.ssb.saga.execution.sagalog.SagaLog;
-import no.ssb.saga.execution.sagalog.SagaLogEntry;
 import no.ssb.saga.samples.polyglot.adapter.PublishToPubSub;
 import no.ssb.saga.samples.polyglot.adapter.WriteToGraph;
 import no.ssb.saga.samples.polyglot.adapter.WriteToObjectStore;
 import no.ssb.saga.samples.polyglot.adapter.WriteToRDBMS;
 import no.ssb.saga.serialization.SagaSerializer;
+import no.ssb.sagalog.SagaLog;
+import no.ssb.sagalog.SagaLogEntry;
 import org.json.JSONObject;
 
 import java.nio.ByteBuffer;

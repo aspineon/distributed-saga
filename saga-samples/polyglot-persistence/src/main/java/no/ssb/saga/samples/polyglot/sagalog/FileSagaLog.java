@@ -2,11 +2,11 @@ package no.ssb.saga.samples.polyglot.sagalog;
 
 import com.squareup.tape2.QueueFile;
 import no.ssb.saga.api.Saga;
-import no.ssb.saga.execution.sagalog.SagaLog;
-import no.ssb.saga.execution.sagalog.SagaLogEntry;
-import no.ssb.saga.execution.sagalog.SagaLogEntryBuilder;
-import no.ssb.saga.execution.sagalog.SagaLogEntryId;
-import no.ssb.saga.execution.sagalog.SagaLogEntryType;
+import no.ssb.sagalog.SagaLog;
+import no.ssb.sagalog.SagaLogEntry;
+import no.ssb.sagalog.SagaLogEntryBuilder;
+import no.ssb.sagalog.SagaLogEntryId;
+import no.ssb.sagalog.SagaLogEntryType;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

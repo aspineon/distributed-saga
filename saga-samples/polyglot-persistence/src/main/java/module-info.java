@@ -8,4 +8,5 @@ module no.ssb.saga.samples.polyglot {
     requires undertow.core;
     requires org.json;
     requires tape;
+    requires no.ssb.sagalog;
 }

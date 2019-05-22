@@ -1,6 +1,6 @@
 package no.ssb.saga.samples.polyglot.sagalog;
 
-import no.ssb.saga.execution.sagalog.SagaLogEntryId;
+import no.ssb.sagalog.SagaLogEntryId;
 
 import java.util.Objects;
 

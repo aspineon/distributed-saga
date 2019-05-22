@@ -1,8 +1,8 @@
 package no.ssb.saga.samples.polyglot.sagalog;
 
-import no.ssb.saga.execution.sagalog.SagaLog;
-import no.ssb.saga.execution.sagalog.SagaLogEntry;
-import no.ssb.saga.execution.sagalog.SagaLogEntryBuilder;
+import no.ssb.sagalog.SagaLog;
+import no.ssb.sagalog.SagaLogEntry;
+import no.ssb.sagalog.SagaLogEntryBuilder;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
