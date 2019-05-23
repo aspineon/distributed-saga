@@ -2,10 +2,12 @@ package no.ssb.saga.samples.polyglot;
 
 import io.undertow.Undertow;
 import no.ssb.concurrent.futureselector.SelectableThreadPoolExectutor;
-import no.ssb.saga.samples.polyglot.sagalog.FileSagaLog;
+import no.ssb.sagalog.SagaLogInitializer;
+import no.ssb.sagalog.SagaLogPool;
 
 import java.net.InetSocketAddress;
-import java.nio.file.Paths;
+import java.util.Map;
+import java.util.ServiceLoader;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -16,7 +18,10 @@ public class PolyglotMain {
     final SelectableThreadPoolExectutor pool;
     final Undertow server;
 
-    PolyglotMain(int port, String host, String sagaLogPath) {
+    PolyglotMain(Map<String, String> configuration) {
+        String host = configuration.get("host");
+        int port = Integer.parseInt(configuration.get("port"));
+
         AtomicLong nextWorkerId = new AtomicLong(1);
         pool = new SelectableThreadPoolExectutor(
                 5, 100,
@@ -35,14 +40,15 @@ public class PolyglotMain {
         );
 
         /*
-         * Create a new file-based saga-log. Typically this will be replaced
-         * with integration to an external highly-available log with low-latency.
+         * Create saga log.
          */
-        FileSagaLog sagaLog = new FileSagaLog(Paths.get(sagaLogPath));
+        ServiceLoader<SagaLogInitializer> loader = ServiceLoader.load(SagaLogInitializer.class);
+        String sagalogProviderClass = configuration.get("sagalog.provider");
+        SagaLogPool sagaLogPool = loader.stream().filter(c -> sagalogProviderClass.equals(c.type().getName())).findFirst().orElseThrow().get().initialize(configuration);
 
         server = Undertow.builder()
                 .addHttpListener(port, host)
-                .setHandler(new PolyglotHttpHandler(pool, sagaLog))
+                .setHandler(new PolyglotHttpHandler(pool, sagaLogPool))
                 .build();
     }
 
@@ -76,7 +82,13 @@ public class PolyglotMain {
     }
 
     public static void main(String[] args) {
-        PolyglotMain polyglotMain = new PolyglotMain(8139, "127.0.0.1", "./sagalog.dat");
+        Map<String, String> configuration = Map.of(
+                "host", "127.0.0.1",
+                "port", "8139",
+                "sagalog.provider", "no.ssb.saga.samples.polyglot.sagalog.FileSagaLogInitializer",
+                "filesagalog.folder", "./target/sagalog"
+        );
+        PolyglotMain polyglotMain = new PolyglotMain(configuration);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> polyglotMain.stop()));
         polyglotMain.start();
     }

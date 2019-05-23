@@ -17,6 +17,7 @@ import no.ssb.saga.samples.polyglot.adapter.WriteToRDBMS;
 import no.ssb.saga.serialization.SagaSerializer;
 import no.ssb.sagalog.SagaLog;
 import no.ssb.sagalog.SagaLogEntry;
+import no.ssb.sagalog.SagaLogPool;
 import org.json.JSONObject;
 
 import java.nio.ByteBuffer;
@@ -27,12 +28,12 @@ import java.util.stream.Collectors;
 
 public class PolyglotHttpHandler implements HttpHandler {
     private final SelectableThreadPoolExectutor executorService;
-    private final SagaLog sagaLog;
+    private final SagaLogPool sagaLogPool;
     private final AdapterLoader adapterLoader;
 
-    public PolyglotHttpHandler(SelectableThreadPoolExectutor executorService, SagaLog sagaLog) {
+    public PolyglotHttpHandler(SelectableThreadPoolExectutor executorService, SagaLogPool sagaLogPool) {
         this.executorService = executorService;
-        this.sagaLog = sagaLog;
+        this.sagaLogPool = sagaLogPool;
 
         /*
          * Register all adapters/drivers that will be used in sagas.
@@ -91,53 +92,62 @@ public class PolyglotHttpHandler implements HttpHandler {
              * Execute Saga
              */
             String executionId = UUID.randomUUID().toString();
-            SagaExecution sagaExecution = new SagaExecution(sagaLog, executorService, polyglotSaga, adapterLoader);
-            long executionStartTime = System.currentTimeMillis();
-            SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, inputRoot, false, r -> {
-            });
-            handoffControl.getHandoffFuture().join(); // wait for saga handoff
-            long handoffTime = System.currentTimeMillis() - executionStartTime;
-            handoffControl.getCompletionFuture().join();
-            long executionTime = System.currentTimeMillis() - executionStartTime;
+            String logId = Thread.currentThread().getName();
+            SagaLog sagaLog = sagaLogPool.connect(logId);
 
-            /*
-             * Respond with result
-             */
-            exchange.setStatusCode(201);
-            exchange.getResponseHeaders().put(new HttpString("Content-Type"), "application/json; charset=utf-8");
-            StringBuilder sb = new StringBuilder();
-            sb.append("{");
-            sb.append("\"sagaHandoffTimeMs\":").append(handoffTime);
-            sb.append(",");
-            sb.append("\"sagaExecutionTimeMs\":").append(executionTime);
-            sb.append(",");
-            sb.append("\"saga\":").append(SagaSerializer.toJson(polyglotSaga));
-            sb.append(",");
-            sb.append("\"log\":[");
-            List<SagaLogEntry> sagaLogEntries = sagaLog.readEntries(executionId).collect(Collectors.toList());
-            for (int i = 0; i < sagaLogEntries.size(); i++) {
-                SagaLogEntry sagaLogEntry = sagaLogEntries.get(i);
-                if (i > 0) {
-                    sb.append(",");
-                }
+            try {
+
+                SagaExecution sagaExecution = new SagaExecution(sagaLog, executorService, polyglotSaga, adapterLoader);
+                long executionStartTime = System.currentTimeMillis();
+                SagaHandoffControl handoffControl = sagaExecution.executeSaga(executionId, inputRoot, false, r -> {
+                });
+                handoffControl.getHandoffFuture().join(); // wait for saga handoff
+                long handoffTime = System.currentTimeMillis() - executionStartTime;
+                handoffControl.getCompletionFuture().join();
+                long executionTime = System.currentTimeMillis() - executionStartTime;
+
+                /*
+                 * Respond with result
+                 */
+                exchange.setStatusCode(201);
+                exchange.getResponseHeaders().put(new HttpString("Content-Type"), "application/json; charset=utf-8");
+                StringBuilder sb = new StringBuilder();
                 sb.append("{");
-                sb.append("\"id\":").append(JSONObject.quote(sagaLog.toString(sagaLogEntry.getId()))).append(",");
-                sb.append("\"executionId\":").append(JSONObject.quote(sagaLogEntry.getExecutionId())).append(",");
-                sb.append("\"type\":").append(JSONObject.quote(sagaLogEntry.getEntryType().toString())).append(",");
-                sb.append("\"nodeId\":").append(JSONObject.quote(sagaLogEntry.getNodeId())).append(",");
-                if (sagaLogEntry.getSagaName() != null) {
-                    sb.append("\"sagaName\":").append(JSONObject.quote(sagaLogEntry.getSagaName())).append(",");
+                sb.append("\"sagaHandoffTimeMs\":").append(handoffTime);
+                sb.append(",");
+                sb.append("\"sagaExecutionTimeMs\":").append(executionTime);
+                sb.append(",");
+                sb.append("\"saga\":").append(SagaSerializer.toJson(polyglotSaga));
+                sb.append(",");
+                sb.append("\"log\":[");
+                List<SagaLogEntry> sagaLogEntries = sagaLog.readEntries(executionId).collect(Collectors.toList());
+                for (int i = 0; i < sagaLogEntries.size(); i++) {
+                    SagaLogEntry sagaLogEntry = sagaLogEntries.get(i);
+                    if (i > 0) {
+                        sb.append(",");
+                    }
+                    sb.append("{");
+                    sb.append("\"id\":").append(JSONObject.quote(sagaLog.toString(sagaLogEntry.getId()))).append(",");
+                    sb.append("\"executionId\":").append(JSONObject.quote(sagaLogEntry.getExecutionId())).append(",");
+                    sb.append("\"type\":").append(JSONObject.quote(sagaLogEntry.getEntryType().toString())).append(",");
+                    sb.append("\"nodeId\":").append(JSONObject.quote(sagaLogEntry.getNodeId())).append(",");
+                    if (sagaLogEntry.getSagaName() != null) {
+                        sb.append("\"sagaName\":").append(JSONObject.quote(sagaLogEntry.getSagaName())).append(",");
+                    }
+                    if (sagaLogEntry.getJsonData() != null) {
+                        sb.append("\"jsonData\":").append(sagaLogEntry.getJsonData());
+                    }
+                    sb.append("}");
                 }
-                if (sagaLogEntry.getJsonData() != null) {
-                    sb.append("\"jsonData\":").append(sagaLogEntry.getJsonData());
-                }
+                sb.append("]");
                 sb.append("}");
+                ByteBuffer responseData = ByteBuffer.wrap(sb.toString().getBytes(StandardCharsets.UTF_8));
+                exchange.setResponseContentLength(responseData.limit());
+                exchange.getResponseSender().send(responseData);
+
+            } finally {
+                sagaLogPool.release(logId);
             }
-            sb.append("]");
-            sb.append("}");
-            ByteBuffer responseData = ByteBuffer.wrap(sb.toString().getBytes(StandardCharsets.UTF_8));
-            exchange.setResponseContentLength(responseData.limit());
-            exchange.getResponseSender().send(responseData);
         };
     }
 }

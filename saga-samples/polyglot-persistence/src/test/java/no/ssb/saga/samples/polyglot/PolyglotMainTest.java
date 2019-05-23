@@ -11,12 +11,21 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 
 public class PolyglotMainTest {
 
     @Test
     public void thatCoordinatorCanExecuteSaga() throws URISyntaxException, IOException, InterruptedException {
-        PolyglotMain polyglotMain = new PolyglotMain(8342, "127.0.0.1", "target/saga.log").start();
+        Map<String, String> configuration = Map.of(
+                "host", "127.0.0.1",
+                "port", "8342",
+                "sagalog.provider", "no.ssb.saga.samples.polyglot.sagalog.FileSagaLogInitializer",
+                //"sagalog.provider", "no.ssb.sagalog.memory.MemorySagaLogInitializer",
+                "filesagalog.folder", "target/sagalogtest"
+        );
+
+        PolyglotMain polyglotMain = new PolyglotMain(configuration).start();
 
         HttpClient httpClient = HttpClient.newBuilder().build();
         HttpRequest httpRequest = HttpRequest

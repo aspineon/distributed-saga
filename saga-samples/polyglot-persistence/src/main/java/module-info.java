@@ -1,3 +1,6 @@
+import no.ssb.saga.samples.polyglot.sagalog.FileSagaLogInitializer;
+import no.ssb.sagalog.SagaLogInitializer;
+
 module no.ssb.saga.samples.polyglot {
     requires no.ssb.saga.api;
     requires no.ssb.saga.execution;
@@ -9,4 +12,8 @@ module no.ssb.saga.samples.polyglot {
     requires org.json;
     requires tape;
     requires no.ssb.sagalog;
+
+    provides SagaLogInitializer with FileSagaLogInitializer;
+
+    uses SagaLogInitializer;
 }
