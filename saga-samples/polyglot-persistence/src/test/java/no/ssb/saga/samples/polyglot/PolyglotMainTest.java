@@ -20,7 +20,7 @@ public class PolyglotMainTest {
         Map<String, String> configuration = Map.of(
                 "host", "127.0.0.1",
                 "port", "8342",
-                "sagalog.provider", "no.ssb.saga.samples.polyglot.sagalog.FileSagaLogInitializer",
+                "sagalog.provider", "no.ssb.sagalog.file.FileSagaLogInitializer",
                 //"sagalog.provider", "no.ssb.sagalog.memory.MemorySagaLogInitializer",
                 "filesagalog.folder", "target/sagalogtest"
         );

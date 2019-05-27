@@ -85,7 +85,7 @@ public class PolyglotMain {
         Map<String, String> configuration = Map.of(
                 "host", "127.0.0.1",
                 "port", "8139",
-                "sagalog.provider", "no.ssb.saga.samples.polyglot.sagalog.FileSagaLogInitializer",
+                "sagalog.provider", "no.ssb.sagalog.file.FileSagaLogInitializer",
                 "filesagalog.folder", "./target/sagalog"
         );
         PolyglotMain polyglotMain = new PolyglotMain(configuration);
