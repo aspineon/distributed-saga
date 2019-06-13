@@ -17,6 +17,8 @@ import no.ssb.saga.samples.polyglot.adapter.WriteToRDBMS;
 import no.ssb.saga.serialization.SagaSerializer;
 import no.ssb.sagalog.SagaLog;
 import no.ssb.sagalog.SagaLogEntry;
+import no.ssb.sagalog.SagaLogId;
+import no.ssb.sagalog.SagaLogOwner;
 import no.ssb.sagalog.SagaLogPool;
 import org.json.JSONObject;
 
@@ -92,8 +94,8 @@ public class PolyglotHttpHandler implements HttpHandler {
              * Execute Saga
              */
             String executionId = UUID.randomUUID().toString();
-            String logId = Thread.currentThread().getName();
-            SagaLog sagaLog = sagaLogPool.connect(logId);
+            SagaLogId logId = sagaLogPool.idFor(Thread.currentThread().getName());
+            SagaLog sagaLog = sagaLogPool.acquire(new SagaLogOwner("local-undertow"), logId);
 
             try {
 

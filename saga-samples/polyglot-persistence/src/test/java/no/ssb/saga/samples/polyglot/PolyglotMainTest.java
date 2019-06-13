@@ -22,7 +22,8 @@ public class PolyglotMainTest {
                 "port", "8342",
                 "sagalog.provider", "no.ssb.sagalog.file.FileSagaLogInitializer",
                 //"sagalog.provider", "no.ssb.sagalog.memory.MemorySagaLogInitializer",
-                "filesagalog.folder", "target/sagalogtest"
+                "filesagalog.folder", "target/sagalogtest",
+                "cluster.instance-id", "standalone"
         );
 
         PolyglotMain polyglotMain = new PolyglotMain(configuration).start();
