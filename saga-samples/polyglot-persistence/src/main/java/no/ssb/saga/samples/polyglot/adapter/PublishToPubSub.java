@@ -16,7 +16,7 @@ public class PublishToPubSub extends Adapter<JSONObject> {
     }
 
     @Override
-    public JSONObject executeAction(Object sagaInput, Map<SagaNode, Object> dependeesOutput) {
+    public JSONObject executeAction(SagaNode sagaNode, Object sagaInput, Map<SagaNode, Object> dependeesOutput) {
         JSONObject root = new JSONObject();
         root.put("input", sagaInput);
         JSONObject output = new JSONObject();
