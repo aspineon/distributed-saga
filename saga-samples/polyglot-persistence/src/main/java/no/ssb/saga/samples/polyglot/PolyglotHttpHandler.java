@@ -94,8 +94,8 @@ public class PolyglotHttpHandler implements HttpHandler {
              * Execute Saga
              */
             String executionId = UUID.randomUUID().toString();
-            SagaLogId logId = sagaLogPool.idFor(Thread.currentThread().getName());
-            SagaLog sagaLog = sagaLogPool.acquire(new SagaLogOwner("local-undertow"), logId);
+            SagaLogId logId = sagaLogPool.registerInstanceLocalIdFor(Thread.currentThread().getName());
+            SagaLog sagaLog = sagaLogPool.tryTakeOwnership(new SagaLogOwner("local-undertow"), logId);
 
             try {
 
@@ -148,7 +148,7 @@ public class PolyglotHttpHandler implements HttpHandler {
                 exchange.getResponseSender().send(responseData);
 
             } finally {
-                sagaLogPool.release(logId);
+                sagaLogPool.releaseOwnership(logId);
             }
         };
     }
